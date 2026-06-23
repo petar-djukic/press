@@ -3,11 +3,12 @@ title: Press Roadmap
 
 releases:
   - version: "01.0"
-    name: Agent Runtime Core Contracts
+    name: Declarative Core — Machine, Engine, Registry
     status: specs_done
     depends_on: []
     description: |
-      Trail lifecycle, stash gating, invocation validation, and undo semantics.
+      Machine state lifecycle, Engine dispatch loop, Registry tool resolution,
+      Tool Contract validation, and outcome classification.
     use_cases:
       - id: rel01.0-uc001-agentic-loop-core
         summary: Prompt to trail mapping and LLM-as-tool loop routing
@@ -46,6 +47,9 @@ releases:
       - id: rel01.1-uc004-prompt-library-baseline
         summary: Prompt family inventory composition and provenance contract
         status: pending
+      - id: rel01.1-uc005-trace-instrumentation
+        summary: OpenTelemetry span instrumentation per tool and transition
+        status: pending
   - version: "01.3"
     name: Comparative Conformance Evaluation
     status: not_started
@@ -57,17 +61,24 @@ releases:
         summary: Evaluate runtime against conformance baselines
         status: pending
   - version: "02.0"
-    name: Undo and Compensation Delivery
+    name: Execution Rollback and Agent Delegation
     status: not_started
     depends_on: ["01.0"]
     description: |
-      Implement and validate rollback and compensation contracts.
+      Implement per-tool Undo, Engine-driven rollback, agent delegation,
+      and approval gate contracts.
     use_cases:
       - id: rel02.0-uc001-rollback-execution
         summary: Reverse-order undo planning and execution
         status: pending
       - id: rel02.0-uc002-partial-failure-reporting
         summary: Partial rollback and unresolved side-effect reporting
+        status: pending
+      - id: rel02.0-uc003-agent-delegation
+        summary: Non-terminal boundary tools composing sub-machines
+        status: pending
+      - id: rel02.0-uc004-approval-gate
+        summary: Checkpoint-based suspension and resume on external decision
         status: pending
   - version: "03.0"
     name: Hardening and Measurable Validation
@@ -86,7 +97,10 @@ releases:
         summary: Ports and adapters contract conformance suite
         status: pending
       - id: rel03.0-uc004-llm-degradation-detection
-        summary: Per-turn metrics collection, always-on statistics, and degradation signal detection
+        summary: Outcome classification taxonomy and convergence detection
+        status: pending
+      - id: rel03.0-uc005-runtime-probe
+        summary: Live state inspection and machine-validated signal injection
         status: pending
   - version: "99.0"
     name: Unscheduled
