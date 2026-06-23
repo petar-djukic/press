@@ -12,11 +12,11 @@ decisions:
     status: superseded
     canonical_docs:
       - docs/specs/product-requirements/prd001-tool-system-components-interfaces.yaml
-      - docs/specs/interfaces/if001-llm-tool-adapter.yaml
-      - docs/specs/interfaces/if003-workspace-discovery-read-port.yaml
-      - docs/specs/interfaces/if004-workspace-mutation-port.yaml
-      - docs/specs/interfaces/if005-validation-port.yaml
-      - docs/specs/interfaces/if006-state-and-audit-ports.yaml
+      - docs/interfaces/if001-llm-tool-adapter.yaml
+      - docs/interfaces/if003-workspace-discovery-read-port.yaml
+      - docs/interfaces/if004-workspace-mutation-port.yaml
+      - docs/interfaces/if005-validation-port.yaml
+      - docs/interfaces/if006-state-and-audit-ports.yaml
     action: removed_after_migration
 
   - legacy_file: prds/trail-lifecycle-state-machine.md
@@ -30,7 +30,7 @@ decisions:
     status: superseded
     canonical_docs:
       - docs/specs/product-requirements/prd003-tool-stash-availability.yaml
-      - docs/specs/interfaces/if006-state-and-audit-ports.yaml
+      - docs/interfaces/if006-state-and-audit-ports.yaml
     action: removed_after_migration
 
   - legacy_file: prds/tool-invocation-validation.md
@@ -75,7 +75,7 @@ decisions:
     canonical_docs:
       - docs/specs/product-requirements/prd006-stitch-essential-toolset.yaml
       - docs/specs/product-requirements/prd007-file-read-search-and-mutation-safety.yaml
-      - docs/specs/interfaces/if003-workspace-discovery-read-port.yaml
+      - docs/interfaces/if003-workspace-discovery-read-port.yaml
     unique_residue:
       - backend_adapter_examples_for_rg
       - backend_swap_invariance_examples
