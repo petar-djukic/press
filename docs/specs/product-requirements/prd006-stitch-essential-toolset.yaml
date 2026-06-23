@@ -52,6 +52,11 @@ non_goals:
   - Define multi-agent orchestration behavior inside stitch runtime.
   - Define MCP integration as a release-1 requirement.
 
+semantic_model:
+  observe: "Tool registry descriptors, stash entries gating the active trail, workspace path boundaries, and build target allowlists from configuration"
+  reason: "Resolve the essential tool surface (llm.generate, find_files, find_text, read_file, edit_file, write_file, build_target, get_errors, ask_user), enforce workspace path boundaries on mutation tools, enforce target allowlists on build_target, and reject unconfigured or disallowed tools"
+  produce: "Versioned tool descriptors with stable names, structured machine-readable results, correlated crumb records for every invocation attempt, and normalized error metadata for failed calls"
+
 acceptance_criteria:
   - id: AC1
     criterion: Essential inventory includes llm.generate, find_files, find_text, read_file, edit_file, write_file, build_target, get_errors, and ask_user.

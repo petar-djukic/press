@@ -55,6 +55,11 @@ non_goals:
   - Define per-tool permission internals.
   - Define low-level persistence implementation choices.
 
+semantic_model:
+  observe: "Trail state transition requests, stash resolution results for activation guards, and blocking failure counts for completion guards"
+  reason: "Validate transition legality against the state model (draft, active, completed, abandoned), enforce activation guards requiring a resolvable stash, enforce completion guards requiring no unresolved failures, and reject transitions from terminal states"
+  produce: "Atomically persisted state transitions with metadata, lifecycle events with trail id and timestamp, rejection events with reason codes, and crumb acceptance or rejection based on trail state"
+
 acceptance_criteria:
   - id: AC1
     criterion: Trail state set supports only draft, active, completed, and abandoned with one active state at a time.

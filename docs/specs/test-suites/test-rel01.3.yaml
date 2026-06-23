@@ -1,0 +1,16 @@
+id: test-rel01.3
+title: Release 01.3 Test Suite
+
+release: "01.3"
+traces:
+  - rel01.3-uc004-comparative-conformance-evaluation
+
+test_cases:
+  - use_case: rel01.3-uc004-comparative-conformance-evaluation
+    name: Runtime meets conformance baselines
+    traces:
+      - prd021-comparative-agent-conformance-baseline AC1
+    inputs:
+      - "Conformance baseline requirements from prd021"
+    expected:
+      - "Runtime meets or exceeds baseline capabilities"

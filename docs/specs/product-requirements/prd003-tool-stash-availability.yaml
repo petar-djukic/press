@@ -50,6 +50,11 @@ non_goals:
   - Define runtime permission enforcement internals.
   - Define rollback execution internals.
 
+semantic_model:
+  observe: "Stash entries for the active trail, tool names from incoming call intents, and stash version from trail metadata"
+  reason: "Resolve the active stash for the trail, check whether the requested tool has an entry with enabled set to true, and deny-by-default when no entry exists"
+  produce: "Eligibility decisions with trail, stash, and tool correlation ids, rejection crumbs for unavailable tools with reason tool_not_in_stash, and availability events for every decision"
+
 acceptance_criteria:
   - id: AC1
     criterion: Trail activation fails for missing stash and succeeds for existing stash.
