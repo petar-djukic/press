@@ -1,82 +1,78 @@
 id: prd003-tool-stash-availability
-title: Tool Stash Availability
+title: Scoped Toolset and Per-State Tool Availability
 
 problem: |
-  Model-proposed tool calls must be constrained by workflow context. Without stash-gated
-  eligibility, tools can execute outside intended capability boundaries.
+  Agents accumulate tools — file manipulation, shell, build, lint, search — and
+  sending the full manifest to the model in every state wastes decision bandwidth
+  and enables phase-inappropriate use. Without per-state tool scoping, a
+  destructive tool can fire in a phase where it is premature, and the model must
+  evaluate and reject every tool in every turn. The trail-scoped stash is too
+  coarse: it allows all stash tools in all states, violating workflow invariants.
 
 goals:
-  - G1: Define stash as per-trail tool availability authority.
-  - G2: Define deterministic eligibility resolution.
-  - G3: Support policy-safe overrides.
-  - G4: Define auditable availability decisions.
+  - G1: Define per-state tool availability driven by the Machine.
+  - G2: Define manifest filtering before each LLM invocation.
+  - G3: Support deny-by-default with explicit per-state visibility lists.
+  - G4: Define auditable availability decisions with manifest validation.
 
 requirements:
   R1:
-    title: Stash Data Model
+    title: Per-State Tool Visibility
     items:
-    - R1.1: Stash must include stash_id, version, and entries.
-    - R1.2: Each stash entry must include tool_name and enabled.
-    - R1.3: Each stash entry may include policy mode and default args.
-    - R1.4: Stash schema must support YAML and JSON serialization.
+    - R1.1: Machine must declare, per non-terminal state, the list of tool names visible to the model.
+    - R1.2: Tools absent from the current state's visibility list must be invisible to the model.
+    - R1.3: Machine-dispatched tools (fixed actions like parse_response) must not appear in the manifest.
+    - R1.4: Each tool declaration must include a visibility field (external for manifest-eligible, internal for machine-dispatched only).
   R2:
-    title: Trail Binding
+    title: Manifest Filtering
     items:
-    - R2.1: Active trail must reference exactly one active stash.
-    - R2.2: Activation must fail if referenced stash does not exist.
-    - R2.3: Activation must persist stash version in trail metadata.
-    - R2.4: Runtime must support configurable stash mutability policy for active trails.
+    - R2.1: PromptAssembler must query the Machine for the current state's visible tools before each LLM invocation.
+    - R2.2: PromptAssembler must resolve each visible tool name against the Registry and build a filtered ToolManifest.
+    - R2.3: Unresolved tool names in the visibility list must be load-time errors.
+    - R2.4: The filtered manifest must be sent with the prompt, not the full Registry.
   R3:
-    title: Eligibility Resolution
+    title: Manifest Validation
     items:
-    - R3.1: Availability check must run before argument decoding.
-    - R3.2: Tool is eligible only when entry exists and enabled is true.
-    - R3.3: Unavailable tools must be rejected with reason code tool_not_in_stash.
-    - R3.4: Availability decisions must include trail id, stash id, stash version, and tool name.
+    - R3.1: Tools returned by the model must be validated against the manifest the model was shown.
+    - R3.2: Hallucinated tool names (not in the manifest) must be rejected before dispatch.
+    - R3.3: The static check (is the tool registered and its signals handled in this state) must run after manifest validation.
+    - R3.4: Manifest validation and static check failures must emit rejection crumbs with reason codes.
   R4:
-    title: Policy Overrides
+    title: Stash as Per-State Scoping Mechanism
     items:
-    - R4.1: Stash entry may define per-tool policy mode for downstream permission behavior.
-    - R4.2: Stash defaults may merge into call args only when descriptor allows defaults.
-    - R4.3: Policy overrides must never enable tools absent from stash entries.
+    - R4.1: The stash concept survives as the mechanism for per-state tool scoping, binding tool availability to Machine state.
+    - R4.2: Stash entries must include tool name, enabled flag, and visibility classification.
+    - R4.3: Stash schema must support YAML and JSON serialization.
+    - R4.4: Stash must be resolvable per state at load time for static validation.
   R5:
     title: Observability and Audit
     items:
-    - R5.1: Every availability decision must emit an event.
-    - R5.2: Rejected availability decisions must create rejection crumbs.
-    - R5.3: Decision events must include call and trail correlation ids.
+    - R5.1: Every manifest filtering decision must be recorded with state, visible tools, and manifest size.
+    - R5.2: Rejected tool calls (hallucinated or out-of-scope) must create rejection crumbs.
+    - R5.3: Manifest events must include trail id, state, and tool correlation ids.
 non_goals:
   - Define tool semantic validation internals.
   - Define runtime permission enforcement internals.
   - Define rollback execution internals.
 
 semantic_model:
-  observe: "Stash entries for the active trail, tool names from incoming call intents, and stash version from trail metadata"
-  reason: "Resolve the active stash for the trail, check whether the requested tool has an entry with enabled set to true, and deny-by-default when no entry exists"
-  produce: "Eligibility decisions with trail, stash, and tool correlation ids, rejection crumbs for unavailable tools with reason tool_not_in_stash, and availability events for every decision"
+  observe: "Machine per-state tool visibility lists, Registry tool declarations with visibility classification, and model-returned tool call names"
+  reason: "Query the Machine for the current state's visible tools, resolve each against the Registry, build a filtered manifest, validate model-returned tool names against the manifest, and reject hallucinated or out-of-scope tools before dispatch"
+  produce: "Filtered ToolManifest per LLM invocation, rejection crumbs for out-of-scope tool calls with reason codes, and manifest events with state and tool correlation"
 
 acceptance_criteria:
   - id: AC1
-    criterion: Trail activation fails for missing stash and succeeds for existing stash.
-    traces: [R2.1, R2.2]
+    criterion: Machine declares per-state tool visibility lists with external/internal classification, and tools absent from the current state are invisible.
+    traces: [R1.1, R1.2, R1.3, R1.4]
   - id: AC2
-    criterion: Calls to tools absent from stash are rejected before decode with reason tool_not_in_stash.
-    traces: [R3.1, R3.2, R3.3]
+    criterion: PromptAssembler queries the Machine, resolves visible tools against the Registry, and builds a filtered manifest before each LLM invocation.
+    traces: [R2.1, R2.2, R2.3, R2.4]
   - id: AC3
-    criterion: Availability decisions persist trail, stash, stash version, and tool context.
-    traces: [R3.4, R5.3]
+    criterion: Model-returned tool names are validated against the manifest, hallucinated names are rejected, and static signal handling checks run after manifest validation.
+    traces: [R3.1, R3.2, R3.3, R3.4]
   - id: AC4
-    criterion: Rejection path emits event and writes rejection crumb.
-    traces: [R5.1, R5.2]
+    criterion: Stash binds tool availability to Machine state with YAML/JSON serialization and load-time resolution.
+    traces: [R4.1, R4.2, R4.3, R4.4]
   - id: AC5
-    criterion: Stash schema round-trips in YAML and JSON.
-    traces: [R1.4]
-  - id: AC6
-    criterion: Stash schema enforces required top-level and entry fields, and accepts optional policy and defaults fields.
-    traces: [R1.1, R1.2, R1.3]
-  - id: AC7
-    criterion: Activation persists stash version and enforces configured mutability behavior.
-    traces: [R2.3, R2.4]
-  - id: AC8
-    criterion: Policy overrides and defaults never enable missing tools.
-    traces: [R4.1, R4.2, R4.3]
+    criterion: Manifest filtering decisions and rejections are recorded with state, tool, and trail correlation.
+    traces: [R5.1, R5.2, R5.3]

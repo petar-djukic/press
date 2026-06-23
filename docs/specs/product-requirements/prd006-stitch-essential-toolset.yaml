@@ -1,15 +1,16 @@
 id: prd006-stitch-essential-toolset
-title: Stitch Essential Toolset and Boundaries
+title: Essential Toolset and Model Adapter
 
 problem: |
-  Stitch runtime needs a minimal, safe, and deterministic tool surface for
-  specification-to-code generation. Without a constrained toolset and explicit
-  boundaries, runtime responsibilities can overlap orchestrator concerns and
-  increase failure risk.
+  The runtime needs a minimal, safe tool surface for specification-to-code
+  generation. invoke_llm must be a boundary tool declared in the Machine, not a
+  special-cased component outside the dispatch cycle. Without the Model Adapter
+  pattern, provider-specific logic leaks into the Engine, model swapping requires
+  code changes, and token accounting fragments across call sites.
 
 goals:
-  - G1: Define the out-of-the-gate essential tool inventory.
-  - G2: Define stable tool contracts and naming for orchestrator integration.
+  - G1: Define the essential tool inventory for specification-to-code generation.
+  - G2: Define invoke_llm as a boundary tool with the Model Adapter pattern.
   - G3: Enforce orchestrator-runtime separation of concerns.
   - G4: Define baseline safety and audit requirements for all essential tools.
 
@@ -17,18 +18,20 @@ requirements:
   R1:
     title: Essential Tool Inventory
     items:
-    - R1.1: Runtime must provide llm.generate for model completion in the internal loop.
+    - R1.1: Runtime must provide invoke_llm as a boundary tool for model completion.
     - R1.2: Runtime must provide find_files and find_text for codebase discovery and content lookup.
     - R1.3: Runtime must provide read_file for bounded content retrieval.
     - R1.4: Runtime must provide edit_file and write_file for deterministic code mutation.
     - R1.5: Runtime must provide build_target and get_errors for validation execution.
     - R1.6: Runtime must provide ask_user for requesting human or agent guidance on ambiguous decisions.
   R2:
-    title: Tool Contract Stability
+    title: Model Adapter Pattern
     items:
-    - R2.1: Each essential tool must have a versioned descriptor with required inputs, outputs, and error codes.
-    - R2.2: Tool names must be stable across releases for orchestrator compatibility.
-    - R2.3: Essential tools must produce structured machine-readable results in addition to human-readable summaries.
+    - R2.1: invoke_llm must be the only tool that crosses the inference boundary, declared in the Machine with signal set LLMResponded and BudgetExceeded.
+    - R2.2: PromptAssembler must build provider-agnostic prompts from current state, conversation history, and state-filtered manifest.
+    - R2.3: ProviderAdapter must translate provider-agnostic prompts to provider-specific API calls and replies back, one implementation per provider.
+    - R2.4: ResponseParser must normalize provider replies (tool calls, completion, free text) into a uniform ToolCallIntent result.
+    - R2.5: LLMConfig must be a YAML field (provider, model, temperature, limits) so model swapping is a config change, not a code change.
   R3:
     title: Orchestrator Boundary
     items:
@@ -45,7 +48,7 @@ requirements:
     title: Audit and Observability
     items:
     - R5.1: Every tool invocation attempt must generate a correlated crumb record.
-    - R5.2: Tool result payloads must include status and normalized error metadata when failed.
+    - R5.2: invoke_llm must aggregate token usage, latency, and cost at a single instrumentation point.
     - R5.3: Tool events must include assignment id, trail id, and call id when available.
 non_goals:
   - Define git workflow operations inside stitch runtime.
@@ -53,26 +56,26 @@ non_goals:
   - Define MCP integration as a release-1 requirement.
 
 semantic_model:
-  observe: "Tool registry descriptors, stash entries gating the active trail, workspace path boundaries, and build target allowlists from configuration"
-  reason: "Resolve the essential tool surface (llm.generate, find_files, find_text, read_file, edit_file, write_file, build_target, get_errors, ask_user), enforce workspace path boundaries on mutation tools, enforce target allowlists on build_target, and reject unconfigured or disallowed tools"
-  produce: "Versioned tool descriptors with stable names, structured machine-readable results, correlated crumb records for every invocation attempt, and normalized error metadata for failed calls"
+  observe: "Machine transition table with invoke_llm as a boundary tool, Registry tool declarations, LLMConfig (provider, model, temperature), conversation history, and state-filtered tool manifest"
+  reason: "Dispatch invoke_llm through the Engine like any other tool, assemble a provider-agnostic prompt from state and history, adapt it to the provider's API format, parse the reply into ToolCallIntent objects, and emit LLMResponded or BudgetExceeded signals for Machine routing"
+  produce: "ToolCallIntent objects with parsed JSON arguments, LLMResponded and BudgetExceeded signals for Machine routing, token usage and cost aggregated per invocation, and correlated crumb records for audit"
 
 acceptance_criteria:
   - id: AC1
-    criterion: Essential inventory includes llm.generate, find_files, find_text, read_file, edit_file, write_file, build_target, get_errors, and ask_user.
+    criterion: Essential inventory includes invoke_llm, find_files, find_text, read_file, edit_file, write_file, build_target, get_errors, and ask_user.
     traces: [R1.1, R1.2, R1.3, R1.4, R1.5, R1.6]
   - id: AC2
-    criterion: All essential tools publish versioned descriptors with stable names and structured outputs.
-    traces: [R2.1, R2.2, R2.3]
+    criterion: invoke_llm is the only inference boundary tool, declared in the Machine with LLMResponded and BudgetExceeded signals.
+    traces: [R2.1]
   - id: AC3
+    criterion: PromptAssembler builds provider-agnostic prompts, ProviderAdapter translates to provider API, ResponseParser normalizes replies, and LLMConfig enables model swapping via YAML.
+    traces: [R2.2, R2.3, R2.4, R2.5]
+  - id: AC4
     criterion: Runtime rejects unconfigured tools and does not expose git lifecycle tools.
     traces: [R3.1, R3.2, R3.3]
-  - id: AC4
-    criterion: Mutation tools enforce workspace boundaries and deterministic no-partial-write behavior.
-    traces: [R4.1, R4.2]
   - id: AC5
-    criterion: build_target target allowlist enforcement is implemented.
-    traces: [R4.3]
+    criterion: Mutation tools enforce workspace boundaries and deterministic no-partial-write behavior, and build_target enforces target allowlist.
+    traces: [R4.1, R4.2, R4.3]
   - id: AC6
-    criterion: Every tool call is auditable with correlated crumb and normalized failure metadata.
+    criterion: Every tool call is auditable with correlated crumb, and invoke_llm aggregates token usage and cost at one point.
     traces: [R5.1, R5.2, R5.3]
