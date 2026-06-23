@@ -50,7 +50,7 @@ success_criteria:
 
 traceability:
   requirements:
-    - prd009-hexagonal-ports-and-wiring:R3.3
-    - prd009-hexagonal-ports-and-wiring:R5.1
-    - prd009-hexagonal-ports-and-wiring:R5.2
-    - prd009-hexagonal-ports-and-wiring:R5.3
+    - srd009-hexagonal-ports-and-wiring:R3.3
+    - srd009-hexagonal-ports-and-wiring:R5.1
+    - srd009-hexagonal-ports-and-wiring:R5.2
+    - srd009-hexagonal-ports-and-wiring:R5.3

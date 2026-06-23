@@ -4,7 +4,7 @@ component: ToolRegistry
 
 purpose: |
   Define MCP-compatible tool schemas for the eight essential tools listed in
-  prd006-stitch-essential-toolset. Each tool has a name, description, and
+  srd006-stitch-essential-toolset. Each tool has a name, description, and
   inputSchema (JSON Schema object) that the LLM receives to understand
   available actions. The ToolRegistry exposes these schemas to the LLM
   provider via the standard MCP tools list format.
@@ -433,20 +433,20 @@ acceptance_checks:
 
 traceability:
   requirements:
-    - prd006-stitch-essential-toolset:R1.1
-    - prd006-stitch-essential-toolset:R1.2
-    - prd006-stitch-essential-toolset:R1.3
-    - prd006-stitch-essential-toolset:R1.4
-    - prd006-stitch-essential-toolset:R1.5
-    - prd006-stitch-essential-toolset:R2.1
-    - prd006-stitch-essential-toolset:R2.2
-    - prd006-stitch-essential-toolset:R2.3
-    - prd006-stitch-essential-toolset:R4.1
-    - prd006-stitch-essential-toolset:R4.2
-    - prd006-stitch-essential-toolset:R4.3
-    - prd001-tool-system-components-interfaces:R2.1
-    - prd001-tool-system-components-interfaces:R3.1
-    - prd004-tool-invocation-validation:R1.1
-    - prd004-tool-invocation-validation:R3.1
+    - srd006-stitch-essential-toolset:R1.1
+    - srd006-stitch-essential-toolset:R1.2
+    - srd006-stitch-essential-toolset:R1.3
+    - srd006-stitch-essential-toolset:R1.4
+    - srd006-stitch-essential-toolset:R1.5
+    - srd006-stitch-essential-toolset:R2.1
+    - srd006-stitch-essential-toolset:R2.2
+    - srd006-stitch-essential-toolset:R2.3
+    - srd006-stitch-essential-toolset:R4.1
+    - srd006-stitch-essential-toolset:R4.2
+    - srd006-stitch-essential-toolset:R4.3
+    - srd001-tool-system-components-interfaces:R2.1
+    - srd001-tool-system-components-interfaces:R3.1
+    - srd004-tool-invocation-validation:R1.1
+    - srd004-tool-invocation-validation:R3.1
   use_cases:
     - rel01.0-uc001-agentic-loop-core

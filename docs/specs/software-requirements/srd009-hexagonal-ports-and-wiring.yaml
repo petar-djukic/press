@@ -1,4 +1,4 @@
-id: prd009-hexagonal-ports-and-wiring
+id: srd009-hexagonal-ports-and-wiring
 title: Hexagonal Ports Adapters and Wiring
 
 problem: |
@@ -48,9 +48,9 @@ requirements:
     - R5.2: Each driven adapter must pass the contract test suite for its implemented port.
     - R5.3: Contract tests must include positive and failure-path scenarios for deterministic behavior.
   R6:
-    title: PRD Interface References
+    title: SRD Interface References
     items:
-    - R6.1: PRDs must support interface references through implemented_by and used_by fields.
+    - R6.1: SRDs must support interface references through implemented_by and used_by fields.
     - R6.2: implemented_by and used_by references must resolve to existing interface specifications.
     - R6.3: Interface relationship direction must be validated for consistency with adapter classification.
 non_goals:
@@ -75,5 +75,5 @@ acceptance_criteria:
     criterion: Port contract tests are defined and required for all adapter implementations.
     traces: [R5.1, R5.2, R5.3]
   - id: AC6
-    criterion: PRD interface references support implemented_by and used_by with resolution and direction validation rules.
+    criterion: SRD interface references support implemented_by and used_by with resolution and direction validation rules.
     traces: [R6.1, R6.2, R6.3]

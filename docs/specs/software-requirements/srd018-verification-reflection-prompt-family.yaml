@@ -1,4 +1,4 @@
-id: prd018-verification-reflection-prompt-family
+id: srd018-verification-reflection-prompt-family
 title: Verification and Reflection Prompt Family
 problem: |
   Stitch needs explicit verification prompts to ensure outputs are validated

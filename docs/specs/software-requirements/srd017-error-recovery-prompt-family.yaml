@@ -1,4 +1,4 @@
-id: prd017-error-recovery-prompt-family
+id: srd017-error-recovery-prompt-family
 title: Error Recovery Prompt Family
 problem: |
   Failures in tool calls, API requests, or formatting are inevitable. Stitch

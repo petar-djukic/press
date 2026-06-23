@@ -1,4 +1,4 @@
-id: prd014-response-format-prompt-family
+id: srd014-response-format-prompt-family
 title: Response Format Prompt Family
 problem: |
   Tool-loop orchestration requires parseable and unambiguous model outputs.

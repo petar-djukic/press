@@ -1,4 +1,4 @@
-id: prd021-comparative-agent-conformance-baseline
+id: srd021-comparative-agent-conformance-baseline
 title: Comparative Agent Conformance Baseline
 
 problem: |
@@ -66,7 +66,7 @@ requirements:
 non_goals:
   - Define source-code-level implementation details for each referenced coding-agent.
   - Define vendor or SDK internals outside stitch runtime boundaries.
-  - Replace existing tool, prompt-family, or ports-and-adapters PRDs.
+  - Replace existing tool, prompt-family, or ports-and-adapters SRDs.
 
 acceptance_criteria:
   - id: AC1

@@ -3,11 +3,11 @@ title: Comparative Conformance Baseline Test Suite
 
 purpose: |
   Verify that runtime behavior conforms to the comparative baseline requirements
-  defined in PRD021.
+  defined in SRD021.
 
 scope:
   requirements:
-    - prd021-comparative-agent-conformance-baseline
+    - srd021-comparative-agent-conformance-baseline
 
 test_groups:
   - id: TG1
@@ -60,26 +60,26 @@ success_criteria:
 
 traceability:
   requirements:
-    - prd021-comparative-agent-conformance-baseline:R1.1
-    - prd021-comparative-agent-conformance-baseline:R1.2
-    - prd021-comparative-agent-conformance-baseline:R1.3
-    - prd021-comparative-agent-conformance-baseline:R2.1
-    - prd021-comparative-agent-conformance-baseline:R2.2
-    - prd021-comparative-agent-conformance-baseline:R2.3
-    - prd021-comparative-agent-conformance-baseline:R3.1
-    - prd021-comparative-agent-conformance-baseline:R3.2
-    - prd021-comparative-agent-conformance-baseline:R3.3
-    - prd021-comparative-agent-conformance-baseline:R4.1
-    - prd021-comparative-agent-conformance-baseline:R4.2
-    - prd021-comparative-agent-conformance-baseline:R4.3
-    - prd021-comparative-agent-conformance-baseline:R5.1
-    - prd021-comparative-agent-conformance-baseline:R5.2
-    - prd021-comparative-agent-conformance-baseline:R5.3
-    - prd021-comparative-agent-conformance-baseline:R6.1
-    - prd021-comparative-agent-conformance-baseline:R6.2
-    - prd021-comparative-agent-conformance-baseline:R6.3
-    - prd021-comparative-agent-conformance-baseline:R7.1
-    - prd021-comparative-agent-conformance-baseline:R7.2
-    - prd021-comparative-agent-conformance-baseline:R8.1
-    - prd021-comparative-agent-conformance-baseline:R8.2
-    - prd021-comparative-agent-conformance-baseline:R8.3
+    - srd021-comparative-agent-conformance-baseline:R1.1
+    - srd021-comparative-agent-conformance-baseline:R1.2
+    - srd021-comparative-agent-conformance-baseline:R1.3
+    - srd021-comparative-agent-conformance-baseline:R2.1
+    - srd021-comparative-agent-conformance-baseline:R2.2
+    - srd021-comparative-agent-conformance-baseline:R2.3
+    - srd021-comparative-agent-conformance-baseline:R3.1
+    - srd021-comparative-agent-conformance-baseline:R3.2
+    - srd021-comparative-agent-conformance-baseline:R3.3
+    - srd021-comparative-agent-conformance-baseline:R4.1
+    - srd021-comparative-agent-conformance-baseline:R4.2
+    - srd021-comparative-agent-conformance-baseline:R4.3
+    - srd021-comparative-agent-conformance-baseline:R5.1
+    - srd021-comparative-agent-conformance-baseline:R5.2
+    - srd021-comparative-agent-conformance-baseline:R5.3
+    - srd021-comparative-agent-conformance-baseline:R6.1
+    - srd021-comparative-agent-conformance-baseline:R6.2
+    - srd021-comparative-agent-conformance-baseline:R6.3
+    - srd021-comparative-agent-conformance-baseline:R7.1
+    - srd021-comparative-agent-conformance-baseline:R7.2
+    - srd021-comparative-agent-conformance-baseline:R8.1
+    - srd021-comparative-agent-conformance-baseline:R8.2
+    - srd021-comparative-agent-conformance-baseline:R8.3

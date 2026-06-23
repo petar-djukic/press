@@ -99,8 +99,8 @@ components:
       - resume from persisted checkpoint
       - classify outcome (Clean, Recovery, Stuck, Divergent) on terminal state
     references:
-      - prd001-tool-system-components-interfaces
-      - prd002-trail-lifecycle-state-machine
+      - srd001-tool-system-components-interfaces
+      - srd002-trail-lifecycle-state-machine
 
   - name: Machine
     provided_by: runtime/data
@@ -115,7 +115,7 @@ components:
       - declare $tool slots for dynamic dispatch (model-selected tools)
       - support per-state tool scoping
     references:
-      - prd002-trail-lifecycle-state-machine
+      - srd002-trail-lifecycle-state-machine
 
   - name: Registry
     provided_by: runtime/tools
@@ -130,8 +130,8 @@ components:
       - factory dispatch for tool construction (exec, rest, builtin, boundary)
       - signal set registration for static Machine validation
     references:
-      - prd001-tool-system-components-interfaces
-      - prd004-tool-invocation-validation
+      - srd001-tool-system-components-interfaces
+      - srd004-tool-invocation-validation
 
   - name: ToolContractValidator
     provided_by: runtime/invocation
@@ -146,7 +146,7 @@ components:
       - parameter type matching
       - undo mode declaration enforcement
     references:
-      - prd004-tool-invocation-validation
+      - srd004-tool-invocation-validation
 
   - name: TrailManager
     provided_by: runtime/core
@@ -156,7 +156,7 @@ components:
       - complete and abandon transitions
       - enforce terminal-state restrictions
     references:
-      - prd002-trail-lifecycle-state-machine
+      - srd002-trail-lifecycle-state-machine
 
   - name: StitchBoundaryAdapter
     provided_by: runtime/integration
@@ -187,8 +187,8 @@ components:
       - signal emission (LLMResponded, BudgetExceeded)
       - per-provider instrumentation and metrics
     references:
-      - prd006-stitch-essential-toolset
-      - prd004-tool-invocation-validation
+      - srd006-stitch-essential-toolset
+      - srd004-tool-invocation-validation
 
   - name: CrumbLedger
     provided_by: runtime/ledger
@@ -200,8 +200,8 @@ components:
       - rejection crumb writes for validation failures
       - undo crumb linkage to original crumbs
     references:
-      - prd001-tool-system-components-interfaces
-      - prd005-undo-and-compensation
+      - srd001-tool-system-components-interfaces
+      - srd005-undo-and-compensation
 
   - name: UndoManager
     provided_by: runtime/undo
@@ -214,7 +214,7 @@ components:
       - per-tool Undo dispatch with recorded result
       - unresolved side-effect reporting
     references:
-      - prd005-undo-and-compensation
+      - srd005-undo-and-compensation
 
   - name: TraceAdapter
     provided_by: runtime/observability
@@ -227,7 +227,7 @@ components:
       - span correlation by trail id and execution id
       - structured logging fallback via log/slog
     references:
-      - prd027-trace-instrumentation
+      - srd027-trace-instrumentation
 
 design_decisions:
   - id: 1
@@ -409,7 +409,7 @@ design_decisions:
     benefits:
       - orchestrator gets a typed outcome, not a raw status code
       - recovery decisions are data-driven, not heuristic
-      - degradation detection (prd024) is one signal within the taxonomy
+      - degradation detection (srd024) is one signal within the taxonomy
     alternatives_rejected:
       - binary success/failure (no recovery or divergence signal)
       - ad hoc status strings (no taxonomy, no static analysis)
@@ -488,7 +488,7 @@ project_structure:
     role: Canonical runtime component inventory with dependencies and sequencing.
   - path: docs/interfaces/
     role: Component-level request and response contracts for implementation.
-  - path: docs/specs/product-requirements/
+  - path: docs/specs/software-requirements/
     role: Numbered requirements and acceptance criteria for each runtime subsystem.
   - path: docs/specs/use-cases/
     role: Tracer-bullet execution flows mapped to architecture touchpoints.
@@ -499,7 +499,7 @@ implementation_status:
   current_focus: Re-align design docs to declarative agent patterns before code implementation.
   progress:
     - item: Vision and architecture YAML rewritten for State Interpreter and Declarative Agent patterns.
-    - item: PRDs being updated to reflect Engine, Machine, Registry, and Tool Contract.
+    - item: SRDs being updated to reflect Engine, Machine, Registry, and Tool Contract.
     - item: Use-case and test-suite specs pending alignment with declarative architecture.
 
 related_documents:

@@ -7,7 +7,7 @@ summary: |
 actor: Developer or evaluator running conformance checks
 trigger: Runtime reaches sufficient maturity for baseline comparison
 flow:
-  - F1: "Load conformance baseline requirements from prd021"
+  - F1: "Load conformance baseline requirements from srd021"
   - F2: "Configure test harness with runtime instance and baseline checklist"
   - F3: "Execute prompt transparency checks: verify prompt assembly is inspectable and reproducible"
   - F4: "Execute parser robustness checks: verify tool call normalization handles malformed inputs"
@@ -15,22 +15,22 @@ flow:
   - F6: "Execute tool architecture checks: verify dynamic tool subset computation per request"
   - F7: "Execute Go creation readiness checks: verify Go-specific diagnostics and LSP integration"
   - F8: "Aggregate results and produce conformance report"
-  - F9: "Identify gaps and map to PRD requirements for future work"
+  - F9: "Identify gaps and map to SRD requirements for future work"
 touchpoints:
-  - T1: "StitchBoundaryAdapter — entry interface conformance (prd021-comparative-agent-conformance-baseline R1)"
-  - T2: "Engine — workflow control conformance (prd021-comparative-agent-conformance-baseline R2)"
-  - T3: "ToolContractValidator — parser robustness conformance (prd021-comparative-agent-conformance-baseline R3)"
-  - T4: "PermissionExecutor — safety and permission conformance (prd021-comparative-agent-conformance-baseline R4)"
-  - T5: "Machine — output routing conformance via signal-based transitions (prd021-comparative-agent-conformance-baseline R5)"
-  - T6: "ValidationPort — Go diagnostics conformance (prd021-comparative-agent-conformance-baseline R6)"
-  - T7: "CrumbLedger — audit quality conformance (prd021-comparative-agent-conformance-baseline R7)"
+  - T1: "StitchBoundaryAdapter — entry interface conformance (srd021-comparative-agent-conformance-baseline R1)"
+  - T2: "Engine — workflow control conformance (srd021-comparative-agent-conformance-baseline R2)"
+  - T3: "ToolContractValidator — parser robustness conformance (srd021-comparative-agent-conformance-baseline R3)"
+  - T4: "PermissionExecutor — safety and permission conformance (srd021-comparative-agent-conformance-baseline R4)"
+  - T5: "Machine — output routing conformance via signal-based transitions (srd021-comparative-agent-conformance-baseline R5)"
+  - T6: "ValidationPort — Go diagnostics conformance (srd021-comparative-agent-conformance-baseline R6)"
+  - T7: "CrumbLedger — audit quality conformance (srd021-comparative-agent-conformance-baseline R7)"
 success_criteria:
   - id: S1
     criterion: Conformance report covers all baseline dimensions with pass/fail/partial results
     traces:
-      - prd021-comparative-agent-conformance-baseline AC1
+      - srd021-comparative-agent-conformance-baseline AC1
   - id: S2
-    criterion: Identified gaps are mapped to specific PRD R-items for follow-up
+    criterion: Identified gaps are mapped to specific SRD R-items for follow-up
     traces:
-      - prd021-comparative-agent-conformance-baseline AC2
+      - srd021-comparative-agent-conformance-baseline AC2
 test_suite: test-rel01.3

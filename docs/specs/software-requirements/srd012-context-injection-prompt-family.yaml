@@ -1,4 +1,4 @@
-id: prd012-context-injection-prompt-family
+id: srd012-context-injection-prompt-family
 title: Context Injection Prompt Family
 problem: |
   Stitch requires structured context injection so each llm.generate call has

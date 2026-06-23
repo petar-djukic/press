@@ -1,4 +1,4 @@
-id: prd023-fuzzy-match-file-editing
+id: srd023-fuzzy-match-file-editing
 title: Fuzzy-Match File Editing
 
 problem: |
@@ -24,7 +24,7 @@ requirements:
     - R1.1: Fuzzy matching must activate only when exact match returns edit_no_match.
     - R1.2: Fuzzy matching must not activate on edit_ambiguous_match (multiple exact matches).
     - R1.3: Fuzzy matching must be gated by a configuration flag (fuzzy_edit_enabled) that defaults to false.
-    - R1.4: When fuzzy matching is disabled, edit_file must behave identically to prd022 exact-match semantics.
+    - R1.4: When fuzzy matching is disabled, edit_file must behave identically to srd022 exact-match semantics.
   R2:
     title: Algorithm and Thresholds
     items:
@@ -47,8 +47,8 @@ requirements:
   R5:
     title: Atomic Write and Safety
     items:
-    - R5.1: Fuzzy edits must use the same temp-file-and-rename atomic write as exact edits (prd022 R2.1).
-    - R5.2: Fuzzy edits must enforce the same workspace path boundaries as exact edits (prd022 R3.1).
+    - R5.1: Fuzzy edits must use the same temp-file-and-rename atomic write as exact edits (srd022 R2.1).
+    - R5.2: Fuzzy edits must enforce the same workspace path boundaries as exact edits (srd022 R3.1).
     - R5.3: Every fuzzy edit invocation must emit a crumb record that includes the similarity score.
 
 non_goals:

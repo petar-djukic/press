@@ -12,15 +12,15 @@ flow:
   - F4: "Execute a dispatch cycle through the wired ports to validate end-to-end data flow"
   - F5: "Replace one adapter with a test double and verify Engine behavior is unchanged"
 touchpoints:
-  - T1: "Engine — depends on ports only (prd009-hexagonal-ports-and-wiring R1, R2)"
-  - T2: "Port interfaces — LLMInvocationPort, WorkspaceDiscoveryReadPort, WorkspaceMutationPort, ValidationPort, StateAuditPorts, TracePort (prd009-hexagonal-ports-and-wiring R3)"
+  - T1: "Engine — depends on ports only (srd009-hexagonal-ports-and-wiring R1, R2)"
+  - T2: "Port interfaces — LLMInvocationPort, WorkspaceDiscoveryReadPort, WorkspaceMutationPort, ValidationPort, StateAuditPorts, TracePort (srd009-hexagonal-ports-and-wiring R3)"
 success_criteria:
   - id: S1
     criterion: Core domain services compile and run with port interfaces only, no adapter imports
     traces:
-      - prd009-hexagonal-ports-and-wiring AC1
+      - srd009-hexagonal-ports-and-wiring AC1
   - id: S2
     criterion: Replacing an adapter with a test double does not require core code changes
     traces:
-      - prd009-hexagonal-ports-and-wiring AC2
+      - srd009-hexagonal-ports-and-wiring AC2
 test_suite: test-rel01.1

@@ -9,7 +9,7 @@ test_cases:
   - use_case: rel01.1-uc003-hexagonal-runtime-wiring
     name: Hexagonal ports and adapters conform to dependency inversion
     traces:
-      - prd009-hexagonal-ports-and-wiring AC1
+      - srd009-hexagonal-ports-and-wiring AC1
     inputs:
       - "Runtime component configuration with port and adapter bindings"
     expected:

@@ -1,4 +1,4 @@
-id: prd013-tool-policy-prompt-family
+id: srd013-tool-policy-prompt-family
 title: Tool Policy Prompt Family
 problem: |
   Stitch depends on strict tool policy prompts to keep invocation behavior

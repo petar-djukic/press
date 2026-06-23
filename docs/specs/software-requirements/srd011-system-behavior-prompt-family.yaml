@@ -1,4 +1,4 @@
-id: prd011-system-behavior-prompt-family
+id: srd011-system-behavior-prompt-family
 title: System Behavior Prompt Family
 problem: |
   Stitch needs a stable system behavior prompt family that defines role, scope,

@@ -69,9 +69,9 @@ acceptance_checks:
 
 traceability:
   requirements:
-    - prd006-stitch-essential-toolset:R1.5
-    - prd008-mage-task-execution-and-diagnostics:R1.1
-    - prd008-mage-task-execution-and-diagnostics:R1.2
-    - prd008-mage-task-execution-and-diagnostics:R1.3
-    - prd008-mage-task-execution-and-diagnostics:R4.1
-    - prd008-mage-task-execution-and-diagnostics:R4.2
+    - srd006-stitch-essential-toolset:R1.5
+    - srd008-mage-task-execution-and-diagnostics:R1.1
+    - srd008-mage-task-execution-and-diagnostics:R1.2
+    - srd008-mage-task-execution-and-diagnostics:R1.3
+    - srd008-mage-task-execution-and-diagnostics:R4.1
+    - srd008-mage-task-execution-and-diagnostics:R4.2

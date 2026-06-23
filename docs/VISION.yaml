@@ -96,27 +96,27 @@ implementation_phases:
   - phase: "01.0"
     focus: Declarative core — Machine, Engine, Registry
     deliverables: |
-      ARCHITECTURE.yaml, VISION.yaml, prd001-tool-system-components-interfaces
-      (Engine, Machine, Registry), prd002-trail-lifecycle-state-machine
-      (Machine state lifecycle), prd004-tool-invocation-validation
+      ARCHITECTURE.yaml, VISION.yaml, srd001-tool-system-components-interfaces
+      (Engine, Machine, Registry), srd002-trail-lifecycle-state-machine
+      (Machine state lifecycle), srd004-tool-invocation-validation
       (Tool Contract validation).
   - phase: "01.1"
     focus: Toolset scoping, model adapter, and trace instrumentation
     deliverables: |
-      prd003-tool-stash-availability (Scoped Toolset), prd006-stitch-essential-toolset
-      (Model Adapter), prd007-file-read-search-and-mutation-safety,
-      prd008-mage-task-execution-and-diagnostics, prd009-hexagonal-ports-and-wiring,
-      prd010-prompt-library-and-composition, prd027-trace-instrumentation,
+      srd003-tool-stash-availability (Scoped Toolset), srd006-stitch-essential-toolset
+      (Model Adapter), srd007-file-read-search-and-mutation-safety,
+      srd008-mage-task-execution-and-diagnostics, srd009-hexagonal-ports-and-wiring,
+      srd010-prompt-library-and-composition, srd027-trace-instrumentation,
       interface specifications.
   - phase: "02.0"
     focus: Execution rollback and agent delegation
     deliverables: |
-      prd005-undo-and-compensation (per-tool Undo), prd028-agent-delegation,
-      prd029-approval-gate.
+      srd005-undo-and-compensation (per-tool Undo), srd028-agent-delegation,
+      srd029-approval-gate.
   - phase: "03.0"
     focus: Outcome classification, runtime probe, and validation
     deliverables: |
-      prd024-llm-degradation-detection (Outcome Classifier), prd030-runtime-probe,
+      srd024-llm-degradation-detection (Outcome Classifier), srd030-runtime-probe,
       use-case specifications, test-suite specifications.
 
 risks:
