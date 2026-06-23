@@ -80,7 +80,7 @@ agent:
     # Set by cobbler orchestrator per generation. See docs/prompts/system-prompt-default.yaml.
     system_prompt_path: docs/prompts/system-prompt-default.yaml
 
-    # LLM provider. See docs/specs/interfaces/if009-provider-config.yaml.
+    # LLM provider. See docs/interfaces/if009-provider-config.yaml.
     provider: ollama
     ollama:
         endpoint: "http://localhost:11434"

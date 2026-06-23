@@ -85,44 +85,8 @@ overview:
     Engine -> StateAuditPorts -> StateAuditAdapter,
     Engine -> TracePort -> TraceAdapter.
 
-interfaces:
-  - name: Orchestrator Boundary
-    summary: |
-      Contracts between the external orchestrator and the runtime Engine.
-    data_structures:
-      - "OrchestratorAssignment: assignment_id, trail_id, specification references, workspace path, execution budget"
-      - "AgentInvokeRequest: prompt, assignment_id, trail_id, machine reference, tool declaration roots, invocation metadata"
-      - "AgentInvokeResponse: status, terminal_output, execution summary, outcome classification"
-    operations:
-      - Accept orchestrator assignment envelope and initialize execution context.
-      - Load Machine and tool declarations, validate against each other.
-      - Enter the dispatch loop and return execution trail ID.
-      - Return execution result envelope to orchestrator on terminal state.
-  - name: Machine and Registry
-    summary: |
-      Contracts for Machine data structure and Registry tool resolution.
-    data_structures:
-      - "Machine: name, initial_state, terminal_states, transitions (state, signal, next_state, action)"
-      - "Signal: typed tool outcome used as transition lookup key"
-      - "Transition: state, signal, next_state, action (tool name or $tool for dynamic dispatch)"
-      - "Registry: map of tool name to tool implementation"
-      - "ToolDeclaration: name, type, parameters, emits, contract, reversibility, side_effects"
-    operations:
-      - "Resolve tool name to implementation through Registry."
-      - "Validate Machine: every state-signal pair exists, every tool name resolves, every signal a tool emits is handled."
-      - "Look up transition for (current_state, last_signal)."
-  - name: Tool Contract
-    summary: |
-      Contracts for tool declaration, execution, and undo.
-    data_structures:
-      - "ToolContract: parameter types, emittable signals, undo mode, side effects"
-      - "ToolResult: signal, output, undo metadata"
-      - "Crumb: state, signal, tool, result metadata, undo metadata"
-    operations:
-      - Execute tool with typed parameters and return typed signal.
-      - Undo tool with recorded result (no-op for read-only tools).
-      - Declare signal set for static Machine validation.
-      - "Events: machine_loaded, machine_validated, tool_dispatched, tool_succeeded, tool_failed, signal_routed, terminal_state_reached, undo_step_succeeded, undo_step_failed"
+    Interface contracts are defined in individual files under docs/interfaces/.
+    See related_documents below for the full list.
 
 components:
   - name: Engine
@@ -522,7 +486,7 @@ project_structure:
     role: Components, interfaces, and design decisions.
   - path: docs/specs/component-catalog.yaml
     role: Canonical runtime component inventory with dependencies and sequencing.
-  - path: docs/specs/interfaces/
+  - path: docs/interfaces/
     role: Component-level request and response contracts for implementation.
   - path: docs/specs/product-requirements/
     role: Numbered requirements and acceptance criteria for each runtime subsystem.
@@ -543,23 +507,23 @@ related_documents:
     purpose: Goals, boundaries, and success outcomes.
   - doc: specs/component-catalog.yaml
     purpose: Canonical component list with responsibilities and dependency contracts.
-  - doc: specs/interfaces/if001-llm-tool-adapter.yaml
+  - doc: interfaces/if001-llm-tool-adapter.yaml
     purpose: invoke_llm boundary tool interface with prompt provenance and signal emission.
-  - doc: specs/interfaces/if002-agent-invoke-interface.yaml
+  - doc: interfaces/if002-agent-invoke-interface.yaml
     purpose: Engine entry point contract between orchestrator and runtime.
-  - doc: specs/interfaces/if003-workspace-discovery-read-port.yaml
+  - doc: interfaces/if003-workspace-discovery-read-port.yaml
     purpose: Port contract for find_files, find_text, and read_file operations.
-  - doc: specs/interfaces/if004-workspace-mutation-port.yaml
+  - doc: interfaces/if004-workspace-mutation-port.yaml
     purpose: Port contract for edit_file and write_file mutation operations.
-  - doc: specs/interfaces/if005-validation-port.yaml
+  - doc: interfaces/if005-validation-port.yaml
     purpose: Port contract for build_target and get_errors.
-  - doc: specs/interfaces/if006-state-and-audit-ports.yaml
+  - doc: interfaces/if006-state-and-audit-ports.yaml
     purpose: Port contracts for trail stash and crumb persistence integration.
-  - doc: specs/interfaces/if007-message-history.yaml
+  - doc: interfaces/if007-message-history.yaml
     purpose: Trail-backed conversation history with crumbs-persisted messages.
-  - doc: specs/interfaces/if008-tool-schemas.yaml
+  - doc: interfaces/if008-tool-schemas.yaml
     purpose: MCP-compatible tool schemas for the essential tools.
-  - doc: specs/interfaces/if009-provider-config.yaml
+  - doc: interfaces/if009-provider-config.yaml
     purpose: Ollama and AWS Bedrock provider configuration and client abstraction.
-  - doc: specs/interfaces/if010-agent-loop-state-machine.yaml
+  - doc: interfaces/if010-agent-loop-state-machine.yaml
     purpose: Machine data structure with states, signals, transitions, and terminal states.

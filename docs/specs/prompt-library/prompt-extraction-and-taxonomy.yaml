@@ -327,5 +327,5 @@ maintenance:
       interfaces/use-cases/PRDs.
   traceability_links:
     - docs/specs/product-requirements/prd010-prompt-library-and-composition.yaml
-    - docs/specs/interfaces/if001-llm-tool-adapter.yaml
+    - docs/interfaces/if001-llm-tool-adapter.yaml
     - docs/specs/use-cases/uc001-agentic-loop-core.yaml
