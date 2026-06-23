@@ -1,36 +1,37 @@
 id: rel01.0-uc002-orchestrator-stitch-boundary
-title: Orchestrator Stitch Boundary
+title: Orchestrator Runtime Boundary
 summary: |
-  The orchestrator prepares an assignment envelope and invokes the stitch runtime.
-  The runtime executes the assignment, produces a result envelope, and returns it
-  to the orchestrator without performing git operations.
+  The orchestrator prepares an assignment envelope and invokes the runtime Engine.
+  The Engine interprets the Machine, produces a result envelope with outcome
+  classification, and returns it to the orchestrator without performing git operations.
 actor: External orchestrator (cobbler-scaffold)
-trigger: Orchestrator picks a ready task and creates an assignment envelope for stitch execution
+trigger: Orchestrator picks a ready task and creates an assignment envelope for Engine execution
 flow:
   - F1: "Orchestrator prepares assignment envelope with trail_id, specification references, workspace path, and execution budget"
   - F2: "Orchestrator sends AgentInvokeRequest with prompt and assignment metadata to StitchBoundaryAdapter"
-  - F3: "StitchBoundaryAdapter validates assignment envelope and initializes runtime execution context"
-  - F4: "StitchBoundaryAdapter delegates to AgentLoopOrchestrator with prompt and trail reference"
-  - F5: "AgentLoopOrchestrator runs the agentic loop (see uc001) until terminal response"
-  - F6: "StitchBoundaryAdapter packages execution summary into AgentInvokeResponse"
-  - F7: "StitchBoundaryAdapter returns result envelope to orchestrator"
-  - F8: "Error — invalid assignment envelope: reject with structured error before loop starts"
-  - F9: "Error — loop execution fails: return partial result with error metadata"
+  - F3: "StitchBoundaryAdapter validates assignment envelope and loads Machine and tool declarations"
+  - F4: "StitchBoundaryAdapter validates Machine against tool signal sets at load time"
+  - F5: "StitchBoundaryAdapter starts Engine dispatch loop (see uc001) until terminal state"
+  - F6: "Engine classifies outcome (Clean, Recovery, Stuck, Divergent) on terminal state"
+  - F7: "StitchBoundaryAdapter packages execution summary with outcome classification into AgentInvokeResponse"
+  - F8: "StitchBoundaryAdapter returns result envelope to orchestrator"
+  - F9: "Error — invalid assignment envelope: reject with structured error before Engine starts"
+  - F10: "Error — Machine validation fails: reject with structured error before any tool executes"
 touchpoints:
-  - T1: "StitchBoundaryAdapter — assignment validation and result packaging (prd001-tool-system-components-interfaces R1, R4)"
-  - T2: "AgentLoopOrchestrator — loop execution delegation (prd002-trail-lifecycle-state-machine R3)"
-  - T3: "CrumbLedger — execution summary extraction (prd001-tool-system-components-interfaces R5)"
+  - T1: "StitchBoundaryAdapter — assignment validation, Machine loading, and result packaging (prd001-tool-system-components-interfaces R1, R3)"
+  - T2: "Engine — dispatch loop execution until terminal state (prd001-tool-system-components-interfaces R1, R4)"
+  - T3: "CrumbLedger — execution summary and outcome classification extraction (prd001-tool-system-components-interfaces R5)"
 success_criteria:
   - id: S1
-    criterion: A valid assignment envelope produces a structured AgentInvokeResponse with status and execution summary
+    criterion: A valid assignment envelope produces a structured AgentInvokeResponse with outcome classification and execution summary
     traces:
-      - prd001-tool-system-components-interfaces AC4
+      - prd001-tool-system-components-interfaces AC1
   - id: S2
-    criterion: An invalid assignment envelope is rejected before the agentic loop starts
+    criterion: An invalid assignment envelope or invalid Machine is rejected before the Engine dispatch loop starts
     traces:
       - prd001-tool-system-components-interfaces AC1
   - id: S3
-    criterion: The stitch runtime performs no git operations; branch management belongs to the orchestrator
+    criterion: The runtime performs no git operations; branch management belongs to the orchestrator
     traces:
-      - prd001-tool-system-components-interfaces AC6
+      - prd001-tool-system-components-interfaces AC1
 test_suite: test-rel01.0

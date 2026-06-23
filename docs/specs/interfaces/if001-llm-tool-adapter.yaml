@@ -1,21 +1,22 @@
 id: if001-llm-tool-adapter
-title: LLMToolAdapter Interface Contract
+title: invoke_llm Boundary Tool Interface Contract
 component: LLMToolAdapter
 
 purpose: |
-  Define the minimal request and response contracts for llm.generate execution
-  with prompt reference resolution, asynchronous provider invocation, timeout
-  behavior, and instrumentation output.
+  Define the invoke_llm boundary tool contract for model inference. invoke_llm is
+  the only tool that crosses the inference boundary, declared in the Machine with
+  signal set LLMResponded and BudgetExceeded. The Model Adapter pattern places all
+  inference behind this one tool and a pluggable ProviderAdapter.
 
-  The LLM object operates like the Ollama chat API: it hides all provider-specific
-  details of mapping raw model output to tool calls. When the response leaves the
-  LLM boundary, tool_calls is a list of ToolCallIntent objects whose arguments are
-  syntactically valid JSON. The caller never sees raw provider wire formats,
-  partial JSON strings, or provider-specific tool_use blocks.
+  The PromptAssembler builds provider-agnostic prompts from current state,
+  conversation history, and the state-filtered manifest. The ProviderAdapter
+  translates to the provider's API format. The ResponseParser normalizes the reply
+  into ToolCallIntent objects with syntactically valid JSON arguments. The caller
+  never sees raw provider wire formats.
 
 dependencies:
-  - ToolRegistry
-  - StashManager
+  - Registry
+  - PromptAssembler
   - CrumbLedger
 
 types:
@@ -54,7 +55,7 @@ types:
         type: string
       tool_name:
         type: string
-        const: llm.generate
+        const: invoke_llm
       provider:
         type: string
       model:
@@ -282,12 +283,10 @@ acceptance_checks:
       and empty arguments. The LLM object never passes syntactically invalid
       JSON/YAML downstream.
 
-traceability:
+  traceability:
   requirements:
-    - prd001-tool-system-components-interfaces:R2.3
-    - prd004-tool-invocation-validation:R1.1
-    - prd004-tool-invocation-validation:R5.2
-    - prd004-tool-invocation-validation:R6.3
-    - prd004-tool-invocation-validation:R6.4
+    - prd006-stitch-essential-toolset:R2.1
+    - prd006-stitch-essential-toolset:R2.4
+    - prd004-tool-invocation-validation:R4.4
   use_cases:
-    - uc001-agentic-loop-core
+    - rel01.0-uc001-agentic-loop-core
