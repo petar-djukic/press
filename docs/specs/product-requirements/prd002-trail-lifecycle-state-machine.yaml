@@ -1,84 +1,80 @@
 id: prd002-trail-lifecycle-state-machine
-title: Trail Lifecycle State Machine
+title: Machine State Lifecycle
 
 problem: |
-  Tool execution contracts exist, but orchestration remains undefined without a trail state machine.
-  We need deterministic lifecycle transitions, guard checks, and transition events for trail-level
-  control and audit.
+  The Machine defines the agent's control flow as a transition table. Without
+  explicit state lifecycle rules, the Machine cannot be validated, replayed, or
+  resumed. States must be inert markers of position with no behavior. Transitions
+  must be deterministic lookup entries, not code paths. Terminal states must halt
+  execution with a typed outcome.
 
 goals:
-  - G1: Define trail states and legal transitions.
-  - G2: Define transition guards for activation, completion, and abandonment.
-  - G3: Define lifecycle event contracts for observability.
-  - G4: Define interaction points with rollback flow.
+  - G1: Define Machine states and legal transitions as data.
+  - G2: Define signal-based transition routing with closed-world validation.
+  - G3: Define terminal states and outcome classification.
+  - G4: Define execution trail lifecycle for resumption and rollback.
 
 requirements:
   R1:
     title: State Model
     items:
-    - R1.1: Trail states must include draft, active, completed, and abandoned.
-    - R1.2: Each trail must have exactly one current state.
-    - R1.3: State transitions must persist atomically with transition metadata.
+    - R1.1: Machine states must be inert markers of position identified by name, carrying no behavior.
+    - R1.2: Machine must declare exactly one initial_state.
+    - R1.3: Machine must declare one or more terminal_states that halt execution.
+    - R1.4: Terminal states must be classified as successful or failed for outcome reporting.
   R2:
-    title: Legal Transitions
+    title: Transitions
     items:
-    - R2.1: Transition draft to active must be allowed.
-    - R2.2: Transition active to completed must be allowed.
-    - R2.3: Transition active to abandoned must be allowed.
-    - R2.4: Transitions from terminal states must be rejected.
+    - R2.1: Transitions must map (state, signal) to (next_state, action) as pure data entries.
+    - R2.2: Each transition must specify the tool name to dispatch or $tool for dynamic dispatch.
+    - R2.3: Transitions to terminal states must omit the action field.
+    - R2.4: The Machine must handle every signal every tool can emit in every state where the tool can be dispatched.
   R3:
-    title: Activation Guards
+    title: Signal Routing
     items:
-    - R3.1: Activation must require a resolvable trail-bound stash.
-    - R3.2: Activation must fail when stash resolution fails.
-    - R3.3: Activation must persist stash id and stash version in trail metadata.
+    - R3.1: Signals must be typed tool outcomes used as transition lookup keys.
+    - R3.2: Each tool must declare a finite, closed set of signals it can emit.
+    - R3.3: Unhandled signals must be rejected as load-time errors before execution.
+    - R3.4: The Engine must route signals to transitions without ad hoc classification.
   R4:
-    title: Completion and Abandon Guards
+    title: Execution Trail Lifecycle
     items:
-    - R4.1: Completion must require no unresolved blocking failures.
-    - R4.2: Abandon must be allowed when unresolved failures exist.
-    - R4.3: Abandon may trigger rollback plan execution when configured.
+    - R4.1: Each execution must create a trail with a branches_from link to the orchestrator assignment crumb.
+    - R4.2: Trail state must transition through draft, active, completed, or abandoned.
+    - R4.3: Terminal state must set the trail to completed (success) or abandoned (failure).
+    - R4.4: Trail state must persist atomically with transition metadata.
   R5:
-    title: Eventing and Audit
+    title: Resumption and Replay
     items:
-    - R5.1: Successful transitions must emit lifecycle events.
-    - R5.2: Rejected transitions must emit rejection events with reason code.
-    - R5.3: Transition events must include trail id, from state, to state, actor, and timestamp.
-  R6:
-    title: Crumb Relationship
-    items:
-    - R6.1: Every crumb must reference one trail.
-    - R6.2: Completed trails must reject new crumbs.
-    - R6.3: Abandoned trails must reject new crumbs.
+    - R5.1: Engine position must reduce to two values: current state and last signal.
+    - R5.2: Execution must be serializable after any tool completes and resumable from the serialized checkpoint.
+    - R5.3: The execution record must reconstruct the full path without re-running any tool.
 non_goals:
-  - Define tool argument semantics.
-  - Define per-tool permission internals.
+  - Define tool implementation internals.
+  - Define provider-specific signal mapping.
   - Define low-level persistence implementation choices.
 
 semantic_model:
-  observe: "Trail state transition requests, stash resolution results for activation guards, and blocking failure counts for completion guards"
-  reason: "Validate transition legality against the state model (draft, active, completed, abandoned), enforce activation guards requiring a resolvable stash, enforce completion guards requiring no unresolved failures, and reject transitions from terminal states"
-  produce: "Atomically persisted state transitions with metadata, lifecycle events with trail id and timestamp, rejection events with reason codes, and crumb acceptance or rejection based on trail state"
+  observe: "Machine transition table (states, signals, transitions, terminal states), tool signal declarations from the Registry, and execution trail state"
+  reason: "Validate that every state-signal pair has a transition and every tool signal is handled, enter the initial state, route signals to transitions via lookup, and halt when a terminal state is reached with outcome classification"
+  produce: "Validated Machine ready for execution, execution trail with state transitions and crumb records, and terminal state outcome (Clean, Recovery, Stuck, Divergent) for orchestrator recovery decisions"
 
 acceptance_criteria:
   - id: AC1
-    criterion: Trail state set supports only draft, active, completed, and abandoned with one active state at a time.
-    traces: [R1.1, R1.2]
+    criterion: Machine states are inert markers with one initial_state and one or more terminal_states classified as successful or failed.
+    traces: [R1.1, R1.2, R1.3, R1.4]
   - id: AC2
-    criterion: Legal transitions draft to active, active to completed, and active to abandoned are accepted.
+    criterion: Transitions map (state, signal) to (next_state, action) as data entries with $tool dynamic dispatch support and terminal transitions omit actions.
     traces: [R2.1, R2.2, R2.3]
   - id: AC3
-    criterion: Transitions from terminal states are rejected with structured reason events.
-    traces: [R2.4, R5.2]
+    criterion: Every signal every tool can emit is handled in every dispatchable state, with unhandled signals rejected at load time.
+    traces: [R2.4, R3.1, R3.2, R3.3]
   - id: AC4
-    criterion: Activation fails when stash cannot be resolved and succeeds when stash id and version are persisted.
-    traces: [R3.1, R3.2, R3.3]
+    criterion: Engine routes signals to transitions via lookup with no ad hoc classification.
+    traces: [R3.4]
   - id: AC5
-    criterion: Completion and abandon guard behavior is enforced, including optional rollback trigger on abandon.
-    traces: [R4.1, R4.2, R4.3]
+    criterion: Execution trail lifecycle transitions through draft, active, completed, or abandoned with atomic persistence.
+    traces: [R4.1, R4.2, R4.3, R4.4]
   - id: AC6
-    criterion: Transition writes are atomic and include complete transition metadata.
-    traces: [R1.3, R5.1, R5.3]
-  - id: AC7
-    criterion: Crumb creation requires trail linkage and is rejected for completed or abandoned trails.
-    traces: [R6.1, R6.2, R6.3]
+    criterion: Engine position reduces to (current state, last signal), is serializable, and the execution record reconstructs without re-running tools.
+    traces: [R5.1, R5.2, R5.3]

@@ -1,74 +1,81 @@
 id: prd001-tool-system-components-interfaces
-title: Tool System Components and Interfaces
+title: Engine, Machine, and Registry Components
 
 problem: |
-  We need a stable component contract for tool registration, selection, validation,
-  invocation, normalization, and eventing. Without explicit boundaries, implementations
-  diverge in behavior, safety, and observability.
+  We need a stable component contract for the declarative agent runtime. Without
+  explicit boundaries between the Engine (interpreter), Machine (transition
+  table), and Registry (tool resolution), implementations diverge in behavior,
+  safety, and observability. The imperative AgentLoopOrchestrator model buried
+  control flow in code; the declarative model makes control flow data that can be
+  validated, diffed, and replayed.
 
 goals:
-  - G1: Define canonical runtime components for tool execution control.
-  - G2: Define interface contracts that support multiple agent families.
-  - G3: Define component relationships and sequence responsibilities.
+  - G1: Define the Engine as a fixed dispatch loop that interprets the Machine.
+  - G2: Define the Machine as a pure data structure mapping (state, signal) to (next_state, action).
+  - G3: Define the Registry as the tool resolution layer with static validation.
   - G4: Define testable acceptance criteria with complete requirement traceability.
 
 requirements:
   R1:
-    title: Component Boundaries
+    title: Engine
     items:
-    - R1.1: Runtime must define ToolRegistry, ToolSelector, ToolCallInterpreter, ToolSyntaxValidator, ToolSemanticValidator, PermissionGate, ToolInvoker, ResultNormalizer, and ToolEventBus.
-    - R1.2: Each component must have one primary responsibility and explicit input and output contract.
-    - R1.3: Component contracts must be independent from provider-specific SDK internals.
+    - R1.1: Runtime must define Engine as a fixed dispatch loop that consults the Machine, resolves tools through the Registry, calls Execute, records crumbs, and routes returned signals.
+    - R1.2: Engine must hold no domain logic. If conditionals accumulate in the Engine, they belong in a tool or the Machine.
+    - R1.3: Engine must expose four operations: Run, Resume, Rollback, and History.
+    - R1.4: Engine must classify execution outcome on terminal state (Clean, Recovery, Stuck, Divergent).
   R2:
-    title: Data Contracts
+    title: Machine
     items:
-    - R2.1: Runtime must define ToolDescriptor contract with tool identity, schemas, capability tags, and adapter key.
-    - R2.2: Runtime must define SelectionContext contract including trail, phase, permission mode, and feature flags.
-    - R2.3: Runtime must define canonical ToolCall and ToolResult contracts for all invocation paths.
+    - R2.1: Runtime must define Machine as a pure data structure mapping (state, signal) to (next_state, action) with no logic, conditionals, or loops.
+    - R2.2: Machine must declare initial_state, terminal_states, and transitions.
+    - R2.3: Machine must support $tool slots for dynamic dispatch where the model selects the tool at runtime.
+    - R2.4: Machine must be loadable, serializable, and validatable without executing code.
   R3:
-    title: Interface Contracts
+    title: Registry
     items:
-    - R3.1: Runtime must define registry and selector interfaces for tool discovery and effective set projection.
-    - R3.2: Runtime must define interpreter and validator interfaces for shape and semantic checks.
-    - R3.3: Runtime must define permission, invoker, and normalizer interfaces for execution and outcome packaging.
+    - R3.1: Runtime must define Registry as the tool resolution layer that maps tool names to implementations at load time.
+    - R3.2: Registry must hold tool declarations with parameter types, signal sets, undo modes, and side effects.
+    - R3.3: Registry must support factory dispatch for tool construction (exec, rest, builtin, boundary).
+    - R3.4: Registry must validate that every tool name referenced in the Machine has a declaration.
   R4:
-    title: Relationship and Sequence Model
+    title: Static Validation
     items:
-    - R4.1: Runtime must define structural relationships between components.
-    - R4.2: Runtime must define ordered sequence from selection through normalization.
-    - R4.3: Invocation must be blocked unless validation and permission checks pass.
+    - R4.1: Engine must validate the Machine at load time before any tool executes.
+    - R4.2: Validation must check that every state-signal pair in the Machine has a transition.
+    - R4.3: Validation must check that every signal a tool emits is handled in every state where the tool can be dispatched.
+    - R4.4: Validation must reject unhandled signals as load-time errors.
   R5:
-    title: Observability and Audit
+    title: Execution Recording
     items:
-    - R5.1: Runtime must emit lifecycle events for selection, validation, permission decisions, invocation, and normalization.
-    - R5.2: Events must be correlated by call and trail identifiers.
-    - R5.3: Denied and failed calls must be represented in normalized results.
+    - R5.1: Engine must record each dispatch cycle as a crumb with state, signal, tool, and result metadata.
+    - R5.2: Crumbs must be correlated by trail id and execution id.
+    - R5.3: The execution record must reconstruct without re-running any tool.
 non_goals:
   - Define provider-specific prompt payload formats.
   - Define individual tool business logic internals.
   - Define rollout sequencing for production deployment.
 
 semantic_model:
-  observe: "Tool call intents from the LLM, stash entries for the active trail, and tool descriptors from the registry"
-  reason: "Resolve the effective tool set from stash, normalize calls into canonical ToolCall contracts, validate availability and semantics in ordered stages, and route execution outcomes to crumb persistence or next invocation"
-  produce: "Canonical ToolCall records, validation outcomes with stage-specific rejection reasons, invocation crumbs with correlated trail and call ids, and lifecycle events for selection, validation, permission, and execution edges"
+  observe: "Machine transition table (states, signals, transitions), Registry tool declarations (parameter types, signal sets, undo modes), and execution trail crumbs"
+  reason: "Validate the Machine against tool signal sets at load time, enter the initial state, and run the dispatch cycle: look up (state, signal) in the Machine, resolve the tool through the Registry, call Execute, record the crumb, and route the returned signal to the next transition until a terminal state is reached"
+  produce: "Execution trail crumbs with state, signal, tool, and result metadata per dispatch cycle, outcome classification (Clean, Recovery, Stuck, Divergent) on terminal state, and a replayable execution record"
 
 acceptance_criteria:
   - id: AC1
-    criterion: Canonical component list and responsibility descriptions exist and are unambiguous.
-    traces: [R1.1, R1.2]
+    criterion: Engine is defined as a fixed dispatch loop with Run, Resume, Rollback, and History operations and no domain logic.
+    traces: [R1.1, R1.2, R1.3]
   - id: AC2
-    criterion: Data contracts for ToolDescriptor, SelectionContext, ToolCall, and ToolResult are specified with required fields.
-    traces: [R2.1, R2.2, R2.3]
+    criterion: Engine classifies execution outcome on terminal state into Clean, Recovery, Stuck, or Divergent.
+    traces: [R1.4]
   - id: AC3
-    criterion: Registry, selector, interpreter, validators, permission, invoker, and normalizer interfaces are specified.
-    traces: [R3.1, R3.2, R3.3]
+    criterion: Machine is defined as a pure data structure with initial_state, terminal_states, transitions, and $tool dynamic dispatch support.
+    traces: [R2.1, R2.2, R2.3, R2.4]
   - id: AC4
-    criterion: Structural and sequence relationship definitions show blocked invocation when validation or permission fails.
-    traces: [R4.1, R4.2, R4.3]
+    criterion: Registry resolves tool names to implementations, holds tool declarations, and supports factory dispatch.
+    traces: [R3.1, R3.2, R3.3, R3.4]
   - id: AC5
-    criterion: Lifecycle event requirements and correlation requirements are specified for all decision edges.
-    traces: [R5.1, R5.2, R5.3]
+    criterion: Static validation checks state-signal pair completeness, signal handling per dispatchable state, and rejects unhandled signals at load time.
+    traces: [R4.1, R4.2, R4.3, R4.4]
   - id: AC6
-    criterion: Component and interface definitions remain provider-agnostic.
-    traces: [R1.3]
+    criterion: Execution recording produces correlated crumbs with state, signal, tool, and result metadata that reconstruct without re-running tools.
+    traces: [R5.1, R5.2, R5.3]
