@@ -49,6 +49,11 @@ non_goals:
   - Implement distributed transaction semantics across external systems.
   - Redefine primary invocation validation flow.
 
+semantic_model:
+  observe: "Invocation crumbs with undo metadata and declared undo modes, trail scope and range for rollback requests, and undo tokens from reversible, compensating, and snapshot modes"
+  reason: "Construct undo plans in reverse chronological order from crumbs within the requested trail, classify crumbs by undo mode (none, reversible, compensating, snapshot), and execute undo actions continuing on step failure unless fail-fast is requested"
+  produce: "Undo plan steps with mode and precondition metadata, per-step undo crumbs linked to original crumbs, and undo summaries with success, failed, skipped, non-reversible counts plus unresolved side-effect reports"
+
 acceptance_criteria:
   - id: AC1
     criterion: Undo plans are generated in reverse order with mode annotations.

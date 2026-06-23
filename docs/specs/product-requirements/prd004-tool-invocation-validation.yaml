@@ -55,6 +55,11 @@ non_goals:
   - Define long-horizon planner behavior.
   - Define rollback plan execution details.
 
+semantic_model:
+  observe: "Incoming ToolCallIntent objects with parsed JSON arguments, stash eligibility results, and typed decode targets from tool descriptors"
+  reason: "Execute the validation pipeline in order (availability, structural decode, semantic validation), block invocation on any stage failure, and map OS and runtime failures to structured execution errors without synthesizing success"
+  produce: "Canonical ToolCall records with call id and trail id, structured validation outcomes per stage, invocation crumbs with result metadata and duration, and correlated events sharing call correlation id across all stages"
+
 acceptance_criteria:
   - id: AC1
     criterion: Malformed args fail in decode stage and do not execute.

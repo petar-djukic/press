@@ -70,6 +70,11 @@ non_goals:
   - Automatic recovery within the loop (recovery is orchestrator responsibility).
   - Detecting semantic correctness of generated code.
 
+semantic_model:
+  observe: "Per-turn TurnMetrics (lines_changed, tool_call_count, mutation_count, error_count, output_tokens, read_count, validation_count, files_created_without_read) and a sliding window of recent turns"
+  reason: "Compute aggregate statistics from all TurnMetrics, evaluate degradation signals (declining_edits via least-squares slope, error_streak, read_only_spinning, blind_creation, validation_heavy) against configured thresholds, and exit with progress_stalled when any signal fires and the master enabled flag is true"
+  produce: "Always-on aggregate statistics in every LoopResult (total lines, mutations, errors, turns, ratios), convergence_detail identifying which signal fired and the triggering metric values, and a progress_stalled exit reason distinguishable from other exit reasons"
+
 acceptance_criteria:
   - id: AC1
     criterion: TurnMetrics are collected after every turn with accurate lines_changed, mutation_count, error_count, read_count, validation_count, and files_created_without_read.

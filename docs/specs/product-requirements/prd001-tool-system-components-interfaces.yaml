@@ -48,6 +48,11 @@ non_goals:
   - Define individual tool business logic internals.
   - Define rollout sequencing for production deployment.
 
+semantic_model:
+  observe: "Tool call intents from the LLM, stash entries for the active trail, and tool descriptors from the registry"
+  reason: "Resolve the effective tool set from stash, normalize calls into canonical ToolCall contracts, validate availability and semantics in ordered stages, and route execution outcomes to crumb persistence or next invocation"
+  produce: "Canonical ToolCall records, validation outcomes with stage-specific rejection reasons, invocation crumbs with correlated trail and call ids, and lifecycle events for selection, validation, permission, and execution edges"
+
 acceptance_criteria:
   - id: AC1
     criterion: Canonical component list and responsibility descriptions exist and are unambiguous.
