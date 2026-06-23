@@ -1,0 +1,77 @@
+id: prd029-approval-gate
+title: Approval Gate
+
+problem: |
+  Agents that modify production systems need confirmation gates before deploying,
+  deleting data, or provisioning. Without the Approval Gate pattern, gates are
+  bolted onto control flow imperatively via callbacks or polling, both of which
+  fail on process restart, lose execution context, and lack shared infrastructure.
+  The gate must be a declared Machine transition, not a procedural interruption.
+
+goals:
+  - G1: Define Approval Gate as a Machine transition with a signal triplet.
+  - G2: Define checkpoint-based suspension that survives process boundaries.
+  - G3: Define resume and rollback paths on approval or rejection.
+  - G4: Define the control-plane API for external authority decisions.
+
+requirements:
+  R1:
+    title: Gate Signal Triplet
+    items:
+    - R1.1: Approval Gate must use the signal triplet AwaitApproval, Approved, and Rejected as ordinary Machine signals.
+    - R1.2: The signals must be handled by ordinary transitions, with nothing special to the Engine.
+    - R1.3: SuspendTool must emit AwaitApproval with a human-readable action summary.
+    - R1.4: Gate placement must follow reversibility tiers — gate before irreversible tools, not before reversible ones.
+  R2:
+    title: Suspension and Checkpoint
+    items:
+    - R2.1: On AwaitApproval, the Engine must checkpoint all three state layers (agent, domain, workspace).
+    - R2.2: The Engine must notify the authority with the action summary and checkpoint reference.
+    - R2.3: The Engine must exit the dispatch loop after checkpointing, allowing the process to terminate.
+    - R2.4: An arbitrary time may pass with full state living in the checkpoint.
+  R3:
+    title: Resume and Rollback
+    items:
+    - R3.1: On Approved, ResumeEngine must load the checkpoint and re-enter the dispatch loop, continuing past the gate.
+    - R3.2: On Rejected, the Machine must route to rollback or an alternative path.
+    - R3.3: ResumeEngine must restore all three state layers from the checkpoint.
+    - R3.4: Resumed execution must continue with the pre-suspension context intact.
+  R4:
+    title: Control-Plane API
+    items:
+    - R4.1: The control-plane API must receive the authority's decision (approve or reject) by checkpoint reference.
+    - R4.2: The API must be callable by human authorities, policy engines, or chains of approvers.
+    - R4.3: The decision must be auditable with approver identity, timestamp, and reason.
+    - R4.4: Multiple authorities must be able to sign off in sequence via chained gates.
+  R5:
+    title: Audit Trail
+    items:
+    - R5.1: Every gate suspension must persist a crumb with checkpoint reference and action summary.
+    - R5.2: Every approval or rejection must persist a crumb with approver identity and decision.
+    - R5.3: The gate lifecycle (suspend, decide, resume or rollback) must be reconstructable from crumbs.
+non_goals:
+  - Define the authority's decision-making logic.
+  - Define authentication or authorization for approvers.
+  - Define notification delivery mechanisms (email, Slack, etc.).
+
+semantic_model:
+  observe: "Machine transitions with AwaitApproval signals, checkpoint snapshots of agent/domain/workspace state, authority decisions (approve or reject), and action summaries for human review"
+  reason: "Dispatch the SuspendTool which emits AwaitApproval, checkpoint all three state layers, notify the authority with the action summary, exit the loop, and on decision load the checkpoint and resume past the gate or route to rollback"
+  produce: "Checkpointed execution state surviving process boundaries, audited gate decisions with approver identity, and resumed or rolled-back execution based on authority decision"
+
+acceptance_criteria:
+  - id: AC1
+    criterion: Approval Gate uses AwaitApproval, Approved, and Rejected as ordinary Machine signals handled by ordinary transitions, with SuspendTool emitting AwaitApproval with action summary.
+    traces: [R1.1, R1.2, R1.3, R1.4]
+  - id: AC2
+    criterion: On AwaitApproval, Engine checkpoints all three state layers, notifies the authority, and exits the loop, allowing process termination and arbitrary time passage.
+    traces: [R2.1, R2.2, R2.3, R2.4]
+  - id: AC3
+    criterion: On Approved, ResumeEngine loads checkpoint and continues; on Rejected, Machine routes to rollback; all three state layers are restored.
+    traces: [R3.1, R3.2, R3.3, R3.4]
+  - id: AC4
+    criterion: Control-plane API receives decisions by checkpoint reference, supports human/policy/chained approvers, and records auditable decisions.
+    traces: [R4.1, R4.2, R4.3, R4.4]
+  - id: AC5
+    criterion: Gate lifecycle (suspend, decide, resume or rollback) is reconstructable from crumbs with checkpoint reference, action summary, and approver identity.
+    traces: [R5.1, R5.2, R5.3]

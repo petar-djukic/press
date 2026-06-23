@@ -1,0 +1,67 @@
+id: prd028-agent-delegation
+title: Agent Delegation
+
+problem: |
+  Multi-agent coordination through imperative wiring couples parent and child control
+  flow. The parent must know the child's states, tools, and transitions. Without the
+  Agent Delegation pattern, hierarchy requires nested machines or shared state, and
+  each machine loses independent validation, audit, and rollback.
+
+goals:
+  - G1: Define non-terminal boundary tools that compose sub-machines and child agents.
+  - G2: Keep each Machine flat and independently validatable.
+  - G3: Define profile references as the delegation mechanism, not code dependencies.
+  - G4: Define independent audit and rollback for child executions.
+
+requirements:
+  R1:
+    title: Non-Terminal Boundary Tools
+    items:
+    - R1.1: Boundary tools must obey the ordinary Tool Contract (parameters, signals, side effects, UndoMemento) but cross into an external actor.
+    - R1.2: Boundary tool Execute must run an entire child execution and return a single signal to the parent Machine.
+    - R1.3: Boundary tool types must include child process (run_agent, execute_task) and nested machine (run_point).
+    - R1.4: Boundary tools must carry a profile reference (config.profile or config.point_machine), not a code dependency.
+  R2:
+    title: Parent-Child Separation
+    items:
+    - R2.1: Parent Machine must route on the returned signal only, with no knowledge of the child's states or tools.
+    - R2.2: Child execution must be invisible above the boundary — the parent sees only the profile path and parameter contract.
+    - R2.3: Child must see only its sub-task, not the parent's context.
+    - R2.4: Each Machine must stay flat and independently validatable.
+  R3:
+    title: Independent Audit and Rollback
+    items:
+    - R3.1: Child executions must be independently auditable with their own crumb trails.
+    - R3.2: Child executions must be independently rollbackable via their own execution records.
+    - R3.3: Trace context must propagate from parent to child across the delegation boundary.
+    - R3.4: Resource authority must narrow as work is delegated downward.
+  R4:
+    title: Composition Tiers
+    items:
+    - R4.1: The canonical composition must support a three-tier process stack (bench, evaluator, generator).
+    - R4.2: Each tier must be a separate profile with its own Machine.
+    - R4.3: Bench must dispatch launch_eval subprocess tools to start evaluators.
+    - R4.4: Evaluators must run generators as nested machines via run_point.
+non_goals:
+  - Define multi-agent orchestration inside the runtime (orchestrator-owned).
+  - Define inter-agent messaging protocols.
+  - Define resource quota management across delegation tiers.
+
+semantic_model:
+  observe: "Parent Machine transition table, boundary tool declarations with profile references, child profile configurations, and trace context from the parent execution"
+  reason: "Dispatch a boundary tool that starts a child execution with a sub-task spec and trace context, let the child run its own agent.run to completion, collapse the child execution into a single signal, and return it to the parent Machine for routing"
+  produce: "Child execution crumb trails (independently auditable and rollbackable), single signal to parent Machine, propagated trace context, and narrowed resource authority for the child"
+
+acceptance_criteria:
+  - id: AC1
+    criterion: Non-terminal boundary tools obey the Tool Contract, run child executions, return single signals, and carry profile references.
+    traces: [R1.1, R1.2, R1.3, R1.4]
+  - id: AC2
+    criterion: Parent routes on returned signal only, child is invisible above the boundary, and each Machine stays flat and validatable.
+    traces: [R2.1, R2.2, R2.3, R2.4]
+  - id: AC3
+    criterion: Child executions are independently auditable and rollbackable, trace context propagates, and resource authority narrows downward.
+    traces: [R3.1, R3.2, R3.3, R3.4]
+  - id: AC4
+    criterion: Three-tier composition (bench, evaluator, generator) is supported with separate profiles and Machines per tier.
+    traces: [R4.1, R4.2, R4.3, R4.4]
