@@ -134,9 +134,25 @@ prd_index:
     summary: Define the optional fuzzy fallback for edit_file using diff-match-patch.
     path: specs/product-requirements/prd023-fuzzy-match-file-editing.yaml
   - id: prd024-llm-degradation-detection
-    title: LLM Degradation Detection
-    summary: Define per-turn metrics, always-on loop statistics, and degradation signals for progress_stalled exit.
+    title: Outcome Classifier
+    summary: Define four-valued convergence taxonomy (Clean, Recovery, Stuck, Divergent) and pure classifier function from execution to type.
     path: specs/product-requirements/prd024-llm-degradation-detection.yaml
+  - id: prd027-trace-instrumentation
+    title: Trace Instrumentation
+    summary: Define Tracer port, four-type OpenTelemetry span tree, and W3C trace context propagation.
+    path: specs/product-requirements/prd027-trace-instrumentation.yaml
+  - id: prd028-agent-delegation
+    title: Agent Delegation
+    summary: Define non-terminal boundary tools that compose sub-machines and child agents with independent audit.
+    path: specs/product-requirements/prd028-agent-delegation.yaml
+  - id: prd029-approval-gate
+    title: Approval Gate
+    summary: Define checkpoint-based suspension at declared Machine states with resume and rollback paths.
+    path: specs/product-requirements/prd029-approval-gate.yaml
+  - id: prd030-runtime-probe
+    title: Runtime Probe
+    summary: Define control-plane server for live state inspection and machine-validated signal injection.
+    path: specs/product-requirements/prd030-runtime-probe.yaml
 
 use_case_index:
   - id: rel01.0-uc001-agentic-loop-core

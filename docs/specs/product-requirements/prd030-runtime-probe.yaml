@@ -1,0 +1,79 @@
+id: prd030-runtime-probe
+title: Runtime Probe
+
+problem: |
+  Imperative agents are opaque at runtime. The only visibility is log output the
+  developer thought to emit, and the only control is crude — SIGSTOP to pause,
+  SIGKILL to abort, restart to roll back. Without the Runtime Probe pattern,
+  operators cannot ask what state the agent is in, inject a signal, or roll back
+  to a checkpoint without killing the process. The Machine's declared state space
+  makes live inspection and safe signal injection possible.
+
+goals:
+  - G1: Define a control-plane server attached to the running Engine.
+  - G2: Define read-plane endpoints for non-blocking state and history queries.
+  - G3: Define control-plane signal injection within the Machine's declared state space.
+  - G4: Define lifecycle tools that operate on persisted checkpoints.
+
+requirements:
+  R1:
+    title: Monitor Recorder
+    items:
+    - R1.1: MonitorRecorder must be an in-process observer the Engine notifies after every dispatch.
+    - R1.2: MonitorRecorder must append a RunEvent (state, signal, tool, result, iteration, timestamp, remaining budget) to the Store.
+    - R1.3: Recording must happen after the transition is committed so it can neither block nor alter it.
+    - R1.4: Recording must be serialization only, with no computation.
+  R2:
+    title: Store and Read Plane
+    items:
+    - R2.1: Store must be a bounded in-memory ring of the most recent N events, dropping oldest when full.
+    - R2.2: Read plane must expose /read_state returning a non-blocking snapshot (current state, last signal, iteration, budget, recent events).
+    - R2.3: Read plane must expose /stream_events pushing each RunEvent over SSE, with gap indicators for clients that fall behind.
+    - R2.4: Store must export the same data as OTel gauges and counters for standard dashboards.
+  R3:
+    title: Control Plane
+    items:
+    - R3.1: Control plane must expose /emit_signal enqueuing a signal the Engine dequeues and routes at its next cycle.
+    - R3.2: Injected signals must be validated against the Machine — signals invalid in the current state must be rejected with a machine-violation error.
+    - R3.3: Control plane must expose /lifecycle_control accepting pause, resume, exit, and rollback commands.
+    - R3.4: Pause must reuse the Approval Gate mechanism, and rollback must reuse the checkpoint mechanism.
+  R4:
+    title: Lifecycle Tools
+    items:
+    - R4.1: LifecycleTool must be a separate agent with its own Machine and profile that operates on persisted checkpoints.
+    - R4.2: LifecycleTool must survive restarts and manage terminated agents.
+    - R4.3: LifecycleTool must browse checkpoint history, select a restore point, and trigger restoration.
+    - R4.4: LifecycleTool is the State Interpreter applied to its own operations — recursion, not special-casing.
+  R5:
+    title: Loop Hooks
+    items:
+    - R5.1: LoopHooks must be in-process policy callbacks (before/after dispatch, on state change, on budget threshold).
+    - R5.2: LoopHooks must observe but never alter the transition.
+    - R5.3: LoopHooks must be the lightest probe mode with no network or serialization.
+    - R5.4: An agent must run identically with or without any probe attached.
+non_goals:
+  - Define security model for HTTP endpoints (localhost binding or auth middleware is deployment-specific).
+  - Replace post-hoc trace analysis for short-running agents.
+  - Define OTel collector or dashboard deployment.
+
+semantic_model:
+  observe: "Engine dispatch cycles (state, signal, tool, result, iteration, budget), Machine declared state space and transitions, checkpoint snapshots, and external control commands (pause, resume, exit, rollback, emit signal)"
+  reason: "After each committed dispatch, record a RunEvent to the bounded Store. Serve non-blocking state snapshots and SSE event streams to observers. Enqueue externally injected signals for the Engine to dequeue and route at its next cycle, validating against the Machine. Translate lifecycle commands to internal signals reusing Approval Gate and checkpoint mechanisms."
+  produce: "Bounded event ring for live inspection, SSE event streams for connected clients, machine-validated signal injection, OTel metric export, and lifecycle tools operating on persisted checkpoints"
+
+acceptance_criteria:
+  - id: AC1
+    criterion: MonitorRecorder records RunEvents after committed transitions without blocking or altering them, and recording is serialization only.
+    traces: [R1.1, R1.2, R1.3, R1.4]
+  - id: AC2
+    criterion: Store is a bounded ring with /read_state snapshots, /stream_events SSE, and OTel metric export.
+    traces: [R2.1, R2.2, R2.3, R2.4]
+  - id: AC3
+    criterion: /emit_signal enqueues machine-validated signals, invalid signals are rejected, and /lifecycle_control accepts pause/resume/exit/rollback reusing Approval Gate and checkpoint mechanisms.
+    traces: [R3.1, R3.2, R3.3, R3.4]
+  - id: AC4
+    criterion: LifecycleTool is a separate agent operating on persisted checkpoints, surviving restarts, and using the State Interpreter recursively.
+    traces: [R4.1, R4.2, R4.3, R4.4]
+  - id: AC5
+    criterion: LoopHooks observe without altering transitions, require no network or serialization, and the agent runs identically with or without any probe.
+    traces: [R5.1, R5.2, R5.3, R5.4]

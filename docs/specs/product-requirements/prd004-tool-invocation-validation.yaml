@@ -1,90 +1,83 @@
 id: prd004-tool-invocation-validation
-title: Tool Invocation and Validation
+title: Tool Contract Validation
 
 problem: |
-  Model output cannot be executed directly. We need a strict runtime pipeline that normalizes
-  call formats, validates availability and arguments, enforces semantic checks, executes safely,
-  and records deterministic outcomes.
+  Tools must be typed contracts, not function signatures with docstrings. Without
+  declared parameter types, emittable signals, undo modes, and side effects, the
+  Machine cannot be statically validated, the Engine cannot dispatch tools
+  generically, and rollback cannot reverse operations from the declaration alone.
+  The imperative validation pipeline (availability, decode, semantic) must be
+  replaced by Tool Contract validation at load time and signal-based dispatch at
+  runtime.
 
 goals:
-  - G1: Define canonical tool call pipeline for all source formats.
-  - G2: Enforce typed decoding before execution.
-  - G3: Enforce tool-owned semantic validation.
-  - G4: Normalize execution outcomes into auditable crumb records.
+  - G1: Define Tool Contract as the typed specification behind each tool.
+  - G2: Enforce static Machine validation against tool signal sets at load time.
+  - G3: Define tool execution and undo as the two mandatory operations.
+  - G4: Normalize tool outcomes into typed signals for Machine routing.
 
 requirements:
   R1:
-    title: Canonical ToolCall
+    title: Tool Contract Structure
     items:
-    - R1.1: Runtime must normalize all incoming call formats into one ToolCall contract.
-    - R1.2: Canonical ToolCall must include call id, trail id, tool name, and raw args.
+    - R1.1: Each tool must declare a contract with parameter types, emittable signals, undo mode, and side effects.
+    - R1.2: Each tool must do exactly one thing. If a tool needs "and" to describe it, it is two tools.
+    - R1.3: Tool contracts must be YAML declarations loadable and validatable without executing code.
+    - R1.4: Tool contracts must specify reversibility (none, reversible, compensating, snapshot).
   R2:
-    title: Validation Order
+    title: Static Validation
     items:
-    - R2.1: Availability validation must execute first.
-    - R2.2: Structural and decode validation must execute second.
-    - R2.3: Semantic validation must execute third.
-    - R2.4: Invocation must run only if prior stages pass.
+    - R2.1: ToolContractValidator must verify every tool name referenced in the Machine has a declaration in the Registry.
+    - R2.2: ToolContractValidator must verify every signal a tool declares to emit is handled in every state where the tool can be dispatched.
+    - R2.3: ToolContractValidator must verify parameter types match between tool declarations and Machine references.
+    - R2.4: Validation must run at load time before any tool executes, rejecting unhandled signals as errors.
   R3:
-    title: Typed Decoding
+    title: Tool Execution
     items:
-    - R3.1: Runtime must decode raw args into typed Go structs.
-    - R3.2: Decode failures must return structured validation outcomes.
-    - R3.3: Decode layer must support JSON and YAML payloads.
+    - R3.1: Each tool must implement Execute (perform the operation and return a typed signal) and Undo (reverse the operation given the recorded result).
+    - R3.2: Execute must accept typed parameters and return a ToolResult with signal, output, and undo metadata.
+    - R3.3: Read-only tools must make Undo a no-op.
+    - R3.4: Tools must fail loudly with an error signal carrying enough information to route recovery.
   R4:
-    title: Semantic Validation
+    title: Signal Declaration
     items:
-    - R4.1: Every executable tool must expose semantic validator entrypoint.
-    - R4.2: Semantic validator must receive typed args and execution context.
-    - R4.3: Semantic validation failures must block invocation and write rejection crumbs.
+    - R4.1: Each tool must declare a finite, closed set of signals it can emit.
+    - R4.2: The Machine must handle every signal in the set.
+    - R4.3: Signals must be typed outcomes used as transition lookup keys.
+    - R4.4: Boundary tools (invoke_llm, serve_ui, run_agent) must declare their variance explicitly through signal sets.
   R5:
-    title: Execution and Error Policy
+    title: Tool Categories
     items:
-    - R5.1: Initial permission behavior must follow execute-and-report.
-    - R5.2: OS and runtime failures must be reported as structured execution errors.
-    - R5.3: Runtime must never synthesize success for failed calls.
-  R6:
-    title: Recording and Events
-    items:
-    - R6.1: Every invocation attempt must create one primary crumb.
-    - R6.2: Rejected calls must include stage outcome metadata in crumbs.
-    - R6.3: Successful calls must include result metadata and duration.
-    - R6.4: Validation and execution events must share call correlation id.
+    - R5.1: Tools must be categorized as deterministic (same signal given identical inputs) or boundary (crosses to external actor with unpredictable response).
+    - R5.2: Boundary tools must be the primary source of variance declared in the Machine.
+    - R5.3: Non-terminal tools must run an entire sub-machine and return a single signal to the parent machine.
+    - R5.4: Composite tools (multiple operations in one interface) must be rejected as anti-patterns and decomposed.
 non_goals:
   - Define stash schema lifecycle.
   - Define long-horizon planner behavior.
   - Define rollback plan execution details.
 
 semantic_model:
-  observe: "Incoming ToolCallIntent objects with parsed JSON arguments, stash eligibility results, and typed decode targets from tool descriptors"
-  reason: "Execute the validation pipeline in order (availability, structural decode, semantic validation), block invocation on any stage failure, and map OS and runtime failures to structured execution errors without synthesizing success"
-  produce: "Canonical ToolCall records with call id and trail id, structured validation outcomes per stage, invocation crumbs with result metadata and duration, and correlated events sharing call correlation id across all stages"
+  observe: "Tool declarations (parameter types, signal sets, undo modes, side effects), Machine transition table, and Registry tool name resolution"
+  reason: "Validate every tool reference and signal at load time, categorize tools as deterministic or boundary, reject composite tools, and verify that Execute and Undo are present for every tool"
+  produce: "Validated tool contracts ready for Engine dispatch, typed signals for Machine routing, and undo metadata for Engine-driven rollback"
 
 acceptance_criteria:
   - id: AC1
-    criterion: Malformed args fail in decode stage and do not execute.
-    traces: [R2.2, R3.1, R3.2]
+    criterion: Each tool declares a contract with parameter types, emittable signals, undo mode, and side effects as YAML.
+    traces: [R1.1, R1.2, R1.3, R1.4]
   - id: AC2
-    criterion: Semantic failures block invocation and produce rejection crumbs.
-    traces: [R2.3, R4.3, R6.2]
-  - id: AC3
-    criterion: Permission and OS failures are reported as execution errors and persisted.
-    traces: [R5.1, R5.2, R6.1]
-  - id: AC4
-    criterion: Successful calls persist duration and correlated result metadata.
-    traces: [R6.3, R6.4]
-  - id: AC5
-    criterion: Validation order is enforced as availability, decode, semantic, and invoke.
+    criterion: ToolContractValidator verifies tool name resolution, signal handling per dispatchable state, and parameter type matching at load time.
     traces: [R2.1, R2.2, R2.3, R2.4]
+  - id: AC3
+    criterion: Each tool implements Execute (returns typed signal) and Undo (reverses with recorded result), with read-only tools making Undo a no-op.
+    traces: [R3.1, R3.2, R3.3]
+  - id: AC4
+    criterion: Tools fail loudly with error signals carrying recovery-routing information.
+    traces: [R3.4]
+  - id: AC5
+    criterion: Each tool declares a closed signal set handled by the Machine, with boundary tools declaring variance explicitly.
+    traces: [R4.1, R4.2, R4.3, R4.4]
   - id: AC6
-    criterion: Native and parsed sources normalize to canonical ToolCall fields.
-    traces: [R1.1, R1.2]
-  - id: AC7
-    criterion: YAML decode behavior matches JSON decode behavior for typed structs.
-    traces: [R3.3]
-  - id: AC8
-    criterion: Semantic validator contract is present and receives typed args plus context.
-    traces: [R4.1, R4.2]
-  - id: AC9
-    criterion: Failed invocation paths never produce success status.
-    traces: [R5.3]
+    criterion: Tools are categorized as deterministic or boundary, non-terminal tools compose sub-machines, and composite tools are rejected.
+    traces: [R5.1, R5.2, R5.3, R5.4]

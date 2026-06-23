@@ -18,10 +18,10 @@ flow:
   - F9: "Identify gaps and map to PRD requirements for future work"
 touchpoints:
   - T1: "StitchBoundaryAdapter — entry interface conformance (prd021-comparative-agent-conformance-baseline R1)"
-  - T2: "AgentLoopOrchestrator — workflow control conformance (prd021-comparative-agent-conformance-baseline R2)"
-  - T3: "InvocationValidator — parser robustness conformance (prd021-comparative-agent-conformance-baseline R3)"
+  - T2: "Engine — workflow control conformance (prd021-comparative-agent-conformance-baseline R2)"
+  - T3: "ToolContractValidator — parser robustness conformance (prd021-comparative-agent-conformance-baseline R3)"
   - T4: "PermissionExecutor — safety and permission conformance (prd021-comparative-agent-conformance-baseline R4)"
-  - T5: "ModelResponseRouter — output routing conformance (prd021-comparative-agent-conformance-baseline R5)"
+  - T5: "Machine — output routing conformance via signal-based transitions (prd021-comparative-agent-conformance-baseline R5)"
   - T6: "ValidationPort — Go diagnostics conformance (prd021-comparative-agent-conformance-baseline R6)"
   - T7: "CrumbLedger — audit quality conformance (prd021-comparative-agent-conformance-baseline R7)"
 success_criteria:

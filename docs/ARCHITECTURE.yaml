@@ -3,125 +3,192 @@ title: Press Architecture
 
 overview:
   summary: |
-    We implement a runtime architecture where model-proposed tool calls are converted into
-    validated, permission-aware execution events persisted as crumbs in trail scope.
+    We implement a declarative agent runtime where the agent is a dataset the Engine
+    interprets. A Machine defines states, signals, and transitions as a YAML
+    transition table. The Engine is a fixed dispatch loop that consults the Machine,
+    resolves tools through the Registry, calls Execute, records the result as a crumb,
+    and routes the returned signal to the next transition. One binary interprets any
+    agent whose YAML conforms to the schema.
 
-    This runtime is a Go library invoked by the cobbler-scaffold orchestrator. It receives
-    a specification and produces code in the target language selected by the orchestrator.
-    The agent is language-agnostic: the orchestrator provides the target language, language-
-    specific rules, and build commands at invocation time. There is no interactive user
-    session. The loop starts when the orchestrator delivers a specification and ends when
-    code is produced or the agent reports a blocker. The orchestrator sets the system prompt,
-    provider configuration, language context, and workspace path before invocation.
+    This runtime is a Go library invoked by the cobbler-scaffold orchestrator. It
+    receives a specification and produces code in the target language selected by the
+    orchestrator. The agent is language-agnostic: the orchestrator provides the
+    target language, language-specific rules, and build commands at invocation time.
+    There is no interactive user session. The loop starts when the orchestrator
+    delivers a specification and ends when the Machine reaches a terminal state.
+    The orchestrator sets the system prompt, provider configuration, language
+    context, and workspace path before invocation.
 
-    The orchestrator creates an assignment crumb in its own workflow trail, then calls
-    invoke. The agent creates a loop trail with a branches_from link to the assignment
-    crumb, starts the loop in its own goroutine, and returns the loop trail ID immediately.
-    The orchestrator does not block. It discovers progress and outcome by querying the
-    loop trail state and crumbs via the cupboard.
+    The orchestrator creates an assignment crumb in its own workflow trail, then
+    calls invoke. The agent creates an execution trail with a branches_from link to
+    the assignment crumb, loads the Machine and tool declarations, validates them
+    against each other, and enters the dispatch loop. invoke returns the execution
+    trail ID immediately. The orchestrator does not block. It discovers progress and
+    outcome by querying the execution trail state and crumbs via the cupboard.
 
-    Conversation history is a trail-backed linked list of messages. Each message (system,
-    user, assistant, tool) is a crumb in the loop trail. The full message list is
-    sent to the LLM on every turn. Token usage is tracked in a stash scoped_to the loop
-    trail. If the context budget is exceeded, the loop terminates and the orchestrator
-    decides what to do (break down the specification, retry, or give up).
+    Conversation history is a trail-backed linked list of messages. Each message
+    (system, user, assistant, tool) is a crumb in the execution trail. The full
+    message list is sent to the LLM on every turn. Token usage is tracked in a stash
+    scoped_to the execution trail. If the context budget is exceeded, the Machine
+    routes to a Failed terminal state and the orchestrator decides what to do.
 
+    invoke_llm is a boundary tool declared in the Machine with its signal set
+    (LLMResponded, BudgetExceeded). The Model Adapter hides provider-specific wire
+    formats and returns pre-parsed ToolCallIntent objects with valid JSON arguments.
     LLM providers are Ollama (local) or AWS Bedrock (cloud). Provider selection and
-    credentials are configured in configuration.yaml. The LLM adapter hides provider
-    differences and returns pre-parsed ToolCallIntent objects with valid JSON arguments.
+    credentials are configured in configuration.yaml.
 
-    The orchestrator owns multi-agent coordination and routing, environment preparation
-    and workspace initialization, tool configuration and allowlist provisioning, git
-    branch and commit lifecycle, pull request and merge workflows, and cross-agent
-    dependency scheduling. The stitch runtime owns trail and crumb execution state,
-    tool invocation and validation pipeline, specification-to-code generation actions,
-    and execution outcome reporting.
+    The orchestrator owns multi-agent coordination and routing, environment
+    preparation and workspace initialization, tool configuration and allowlist
+    provisioning, git branch and commit lifecycle, pull request and merge workflows,
+    and cross-agent dependency scheduling. The runtime owns Machine interpretation,
+    tool dispatch, signal routing, execution recording, and rollback.
 
-    The runtime uses hexagonal dependency inversion. Core domain services
-    (AgentLoopOrchestrator, TrailManager, InvocationValidator, ModelResponseRouter,
-    UndoManager) depend on inbound ports (AgentInvokePort) and outbound ports
-    (LLMInvocationPort, WorkspaceDiscoveryReadPort, WorkspaceMutationPort,
-    ValidationPort, StateAuditPorts). Driving adapters (StitchBoundaryAdapter) and
-    driven adapters (LLMToolAdapter, WorkspaceDiscoveryAdapter, WorkspaceMutationAdapter,
-    ValidationAdapter, StateAuditAdapter) implement port contracts. Any adapter can be
-    swapped if it conforms to the bound port contract.
+    The runtime uses hexagonal dependency inversion. The Engine depends on outbound
+    ports (LLMInvocationPort, WorkspaceDiscoveryReadPort, WorkspaceMutationPort,
+    ValidationPort, StateAuditPorts, TracePort). Driven adapters (LLMToolAdapter,
+    WorkspaceDiscoveryAdapter, WorkspaceMutationAdapter, ValidationAdapter,
+    StateAuditAdapter, TraceAdapter) implement port contracts. The driving adapter
+    (StitchBoundaryAdapter) accepts orchestrator assignments and starts the Engine.
+    Any adapter can be swapped if it conforms to the bound port contract.
 
-    Observability uses standard Go log/slog. The cobbler orchestrator reads logs from
-    shared infrastructure. Future migration to OpenTelemetry is supported by the
-    structured logging approach.
+    Observability uses OpenTelemetry spans per tool execution and Machine transition,
+    with structured logging via Go log/slog as a fallback. The Trace Instrumentation
+    pattern gives per-step observability without modifying the Machine or tools.
   lifecycle: |
-    Trail lifecycle: draft -> active -> completed or abandoned.
+    Machine lifecycle: load -> validate -> run -> terminal.
 
-    Agentic loop lifecycle: receive prompt -> map to trail -> invoke llm.generate as standard tool ->
-    LLM object parses provider response and returns ToolCallIntent objects with parsed JSON arguments ->
-    classify output (terminal vs actionable) -> insert crumb or build next ToolCall from ToolCallIntent ->
-    repeat until terminal response.
+    Execution lifecycle: load Machine and tool declarations -> validate Machine
+    against tool signal sets -> enter initial state -> dispatch cycle (look up
+    (state, signal) in Machine, resolve tool through Registry, call Execute, record
+    crumb, route returned signal) -> repeat until terminal state.
 
-    Invocation lifecycle: received -> availability checked -> decoded (ToolCallIntent.arguments already
-    valid JSON from LLM boundary) -> semantically validated -> invoked or rejected -> persisted.
+    Tool lifecycle: registry resolves tool name -> factory constructs tool instance
+    -> Execute performs operation and returns signal -> crumb records result ->
+    Undo reverses operation when rollback is requested.
 
-    Undo lifecycle: plan built in reverse order -> steps executed -> undo crumbs persisted ->
-    summary produced.
+    Rollback lifecycle: Engine walks execution backward -> calls Undo on each tool
+    with recorded result -> undo crumbs persisted -> summary produced.
   coordination_pattern: |
-    The model proposes actions, and the runtime decides what can execute. Runtime components own
-    eligibility checks, validation ordering, execution boundaries, event emission, and persistence.
+    The Engine interprets the Machine. The Machine declares which tools can run in
+    which states. Tools return typed signals. The Engine routes signals to
+    transitions. No participant knows the others' internals.
 
-    The external orchestrator owns multi-agent assignment, agent selection, git management,
-    branch lifecycle, and merge orchestration.
+    The external orchestrator owns multi-agent assignment, agent selection, git
+    management, branch lifecycle, and merge orchestration.
 
-    Inbound flow: StitchBoundaryAdapter -> AgentInvokePort -> AgentLoopOrchestrator.
-    Outbound bindings: AgentLoopOrchestrator -> LLMInvocationPort -> LLMToolAdapter,
-    AgentLoopOrchestrator -> WorkspaceDiscoveryReadPort -> WorkspaceDiscoveryAdapter,
-    AgentLoopOrchestrator -> WorkspaceMutationPort -> WorkspaceMutationAdapter,
-    AgentLoopOrchestrator -> ValidationPort -> ValidationAdapter,
-    AgentLoopOrchestrator -> StateAuditPorts -> StateAuditAdapter.
+    Inbound flow: StitchBoundaryAdapter -> Engine.Run(machine, registry).
+    Outbound bindings: Engine -> LLMInvocationPort -> LLMToolAdapter,
+    Engine -> WorkspaceDiscoveryReadPort -> WorkspaceDiscoveryAdapter,
+    Engine -> WorkspaceMutationPort -> WorkspaceMutationAdapter,
+    Engine -> ValidationPort -> ValidationAdapter,
+    Engine -> StateAuditPorts -> StateAuditAdapter,
+    Engine -> TracePort -> TraceAdapter.
 
 interfaces:
   - name: Orchestrator Boundary
     summary: |
-      Contracts between the external orchestrator and the stitch runtime.
+      Contracts between the external orchestrator and the runtime Engine.
     data_structures:
       - "OrchestratorAssignment: assignment_id, trail_id, specification references, workspace path, execution budget"
-      - "AgentInvokeRequest: prompt, assignment_id, trail_id, invocation metadata"
-      - "AgentInvokeResponse: status, terminal_output, execution summary"
+      - "AgentInvokeRequest: prompt, assignment_id, trail_id, machine reference, tool declaration roots, invocation metadata"
+      - "AgentInvokeResponse: status, terminal_output, execution summary, outcome classification"
     operations:
-      - Accept orchestrator assignment envelope and initialize stitch execution context.
-      - Invoke agent with prompt as primary entrypoint.
-      - Return stitch execution result envelope to orchestrator.
-  - name: Trail and Stash
+      - Accept orchestrator assignment envelope and initialize execution context.
+      - Load Machine and tool declarations, validate against each other.
+      - Enter the dispatch loop and return execution trail ID.
+      - Return execution result envelope to orchestrator on terminal state.
+  - name: Machine and Registry
     summary: |
-      Contracts for trail lifecycle and stash-scoped tool availability.
+      Contracts for Machine data structure and Registry tool resolution.
     data_structures:
-      - "Trail: trail_id, state, active stash id, stash version"
-      - "Stash: stash_id, version, per-tool entries"
-      - "PromptReference: stash key or inline attachment metadata"
+      - "Machine: name, initial_state, terminal_states, transitions (state, signal, next_state, action)"
+      - "Signal: typed tool outcome used as transition lookup key"
+      - "Transition: state, signal, next_state, action (tool name or $tool for dynamic dispatch)"
+      - "Registry: map of tool name to tool implementation"
+      - "ToolDeclaration: name, type, parameters, emits, contract, reversibility, side_effects"
     operations:
-      - Resolve active stash for trail.
-      - Evaluate tool eligibility from stash.
-  - name: Tool Invocation
+      - "Resolve tool name to implementation through Registry."
+      - "Validate Machine: every state-signal pair exists, every tool name resolves, every signal a tool emits is handled."
+      - "Look up transition for (current_state, last_signal)."
+  - name: Tool Contract
     summary: |
-      Contracts for tool call normalization, validation, and execution.
+      Contracts for tool declaration, execution, and undo.
     data_structures:
-      - "ToolDescriptor: invocation metadata and undo mode"
-      - "ToolCallIntent: id, name, arguments (parsed JSON object), optional parse_error"
-      - "ToolCall: call_id, trail_id, tool_name, typed args (decoded from ToolCallIntent.arguments)"
-      - "Crumb: validation, execution, and rollback outcome metadata"
+      - "ToolContract: parameter types, emittable signals, undo mode, side effects"
+      - "ToolResult: signal, output, undo metadata"
+      - "Crumb: state, signal, tool, result metadata, undo metadata"
     operations:
-      - Decode raw args to typed Go structs.
-      - Validate tool semantics.
-      - Compose LLM prompt from crumb context and stash prompt references.
-      - Invoke tool and capture runtime and OS failures.
-      - Invoke LLM providers asynchronously with timeout and structured failures.
-      - Persist invocation crumb and optional undo metadata.
-      - Build and execute reverse-order undo plan.
-      - "Events: stitch_assignment_received, tool_call_received, tool_availability_rejected, tool_validation_rejected, tool_invocation_succeeded, tool_invocation_failed, stitch_result_emitted, undo_step_succeeded, undo_step_failed"
+      - Execute tool with typed parameters and return typed signal.
+      - Undo tool with recorded result (no-op for read-only tools).
+      - Declare signal set for static Machine validation.
+      - "Events: machine_loaded, machine_validated, tool_dispatched, tool_succeeded, tool_failed, signal_routed, terminal_state_reached, undo_step_succeeded, undo_step_failed"
 
 components:
+  - name: Engine
+    provided_by: runtime/core
+    responsibility: Interpret the Machine. Run the dispatch loop, resolve tools through the Registry, record crumbs, and route signals to transitions.
+    capabilities:
+      - load and validate Machine against tool signal sets
+      - "dispatch cycle: look up transition, resolve tool, call Execute, record crumb, route signal"
+      - "rollback: walk execution backward, call Undo per tool"
+      - resume from persisted checkpoint
+      - classify outcome (Clean, Recovery, Stuck, Divergent) on terminal state
+    references:
+      - prd001-tool-system-components-interfaces
+      - prd002-trail-lifecycle-state-machine
+
+  - name: Machine
+    provided_by: runtime/data
+    responsibility: |
+      Pure data structure mapping (state, signal) to (next_state, action). No logic,
+      conditionals, or loops. States are inert markers of position. Signals are typed
+      tool outcomes. Transitions route signals to the next state and tool. Terminal
+      states halt execution.
+    capabilities:
+      - declare states, signals, and transitions as YAML
+      - declare initial state and terminal states
+      - declare $tool slots for dynamic dispatch (model-selected tools)
+      - support per-state tool scoping
+    references:
+      - prd002-trail-lifecycle-state-machine
+
+  - name: Registry
+    provided_by: runtime/tools
+    responsibility: |
+      Resolve tool names to implementations at load time. Hold tool declarations
+      (parameter types, signal sets, undo modes, side effects). Validate that every
+      tool name referenced in the Machine has a declaration and every emittable
+      signal is handled by the Machine.
+    capabilities:
+      - tool declaration loading and schema validation
+      - tool name to implementation resolution
+      - factory dispatch for tool construction (exec, rest, builtin, boundary)
+      - signal set registration for static Machine validation
+    references:
+      - prd001-tool-system-components-interfaces
+      - prd004-tool-invocation-validation
+
+  - name: ToolContractValidator
+    provided_by: runtime/invocation
+    responsibility: |
+      Validate tool declarations against the Machine at load time. Check that every
+      tool referenced in the Machine has a declaration, every emittable signal is
+      handled in every state where the tool can be dispatched, and parameter types
+      match tool descriptors.
+    capabilities:
+      - static signal completeness checking
+      - tool name resolution verification
+      - parameter type matching
+      - undo mode declaration enforcement
+    references:
+      - prd004-tool-invocation-validation
+
   - name: TrailManager
     provided_by: runtime/core
-    responsibility: Own trail lifecycle and stash binding.
+    responsibility: Own execution trail lifecycle and stash binding.
     capabilities:
-      - create and activate trail
+      - create and activate execution trail
       - complete and abandon transitions
       - enforce terminal-state restrictions
     references:
@@ -129,109 +196,44 @@ components:
 
   - name: StitchBoundaryAdapter
     provided_by: runtime/integration
-    responsibility: Translate orchestrator assignment envelopes to internal execution context and return stitch results.
+    responsibility: |
+      Translate orchestrator assignment envelopes to internal execution context.
+      Load Machine and tool declarations, start the Engine, and return execution
+      results.
     capabilities:
       - assignment envelope validation
-      - runtime context initialization
-      - stitch result packaging
+      - runtime context initialization (machine, registry, provider config)
+      - stitch result packaging with outcome classification
     references:
-      - specs/use-cases/uc002-orchestrator-stitch-boundary.yaml
-
-  - name: AgentLoopOrchestrator
-    provided_by: runtime/core
-    responsibility: Drive loop turns from prompt receipt through response routing.
-    capabilities:
-      - prompt to trail mapping
-      - llm.generate loop-turn invocation
-      - loop continuation and completion control
-    references:
-      - prd002-trail-lifecycle-state-machine
-      - prd004-tool-invocation-validation
-
-  - name: StashManager
-    provided_by: runtime/stash
-    responsibility: Resolve and evaluate trail-scoped tool availability.
-    capabilities:
-      - stash lookup and version resolution
-      - per-tool eligibility decisions
-      - policy override exposure
-    references:
-      - prd003-tool-stash-availability
-
-  - name: ToolRegistry
-    provided_by: runtime/tools
-    responsibility: Provide canonical tool descriptors and adapter bindings.
-    capabilities:
-      - descriptor lookup
-      - undo mode lookup
-      - tool adapter resolution
-    references:
-      - prd001-tool-system-components-interfaces
+      - specs/use-cases/rel01.0-uc002-orchestrator-stitch-boundary.yaml
 
   - name: LLMToolAdapter
     provided_by: runtime/tools
     responsibility: |
-      Build prompts and invoke configured LLM providers with instrumentation.
-      Hide all provider-specific wire formats and return ToolCallIntent objects
-      with syntactically valid JSON arguments (Ollama-style boundary).
+      Implement the invoke_llm boundary tool. Build prompts from stash references
+      and crumb context. Invoke configured LLM providers with instrumentation. Hide
+      all provider-specific wire formats and return ToolCallIntent objects with
+      syntactically valid JSON arguments. Emit LLMResponded or BudgetExceeded
+      signals.
     capabilities:
       - prompt composition from stash references and crumb attachments
-      - asynchronous provider invocation
+      - asynchronous provider invocation with timeout
       - provider-native response parsing into ToolCallIntent objects
       - syntactic JSON validation of tool call arguments before return
-      - timeout and failure normalization
+      - signal emission (LLMResponded, BudgetExceeded)
       - per-provider instrumentation and metrics
     references:
-      - prd001-tool-system-components-interfaces
-      - prd004-tool-invocation-validation
-
-  - name: ToolCallInterpreter
-    provided_by: runtime/invocation
-    responsibility: Normalize model and parser outputs into canonical ToolCall.
-    capabilities:
-      - native tool call adaptation
-      - parser output adaptation
-      - call correlation id assignment
-    references:
-      - prd004-tool-invocation-validation
-
-  - name: ModelResponseRouter
-    provided_by: runtime/core
-    responsibility: Route LLM outputs to crumb insertion or next invocation.
-    capabilities:
-      - classify terminal vs actionable outputs
-      - write output-only crumb path
-      - dispatch next invocation path
-    references:
-      - prd001-tool-system-components-interfaces
-      - prd004-tool-invocation-validation
-
-  - name: InvocationValidator
-    provided_by: runtime/invocation
-    responsibility: Enforce decode and semantic validation sequence.
-    capabilities:
-      - typed decode for JSON and YAML
-      - semantic validator dispatch
-      - stage-specific rejection reasons
-    references:
-      - prd004-tool-invocation-validation
-
-  - name: PermissionExecutor
-    provided_by: runtime/execution
-    responsibility: Execute validated calls and map runtime failures.
-    capabilities:
-      - execute-and-report baseline policy
-      - timeout and cancellation controls
-      - structured OS failure mapping
-    references:
+      - prd006-stitch-essential-toolset
       - prd004-tool-invocation-validation
 
   - name: CrumbLedger
     provided_by: runtime/ledger
-    responsibility: Persist invocation and undo outcomes as crumbs.
+    responsibility: |
+      Persist execution and undo outcomes as crumbs. Each dispatch cycle records
+      state, signal, tool, and result metadata. Undo crumbs link to original crumbs.
     capabilities:
-      - primary invocation crumb writes
-      - rejection crumb writes
+      - execution crumb writes per dispatch cycle
+      - rejection crumb writes for validation failures
       - undo crumb linkage to original crumbs
     references:
       - prd001-tool-system-components-interfaces
@@ -239,269 +241,279 @@ components:
 
   - name: UndoManager
     provided_by: runtime/undo
-    responsibility: Build and execute compensation and rollback plans.
+    responsibility: |
+      Walk execution backward via recorded crumbs, calling each tool's Undo method
+      with its recorded result. Report success, failure, skipped, and non-reversible
+      counts.
     capabilities:
-      - reverse-order undo planning
-      - mode-aware undo execution
+      - reverse-order undo execution via Engine
+      - per-tool Undo dispatch with recorded result
       - unresolved side-effect reporting
     references:
       - prd005-undo-and-compensation
 
+  - name: TraceAdapter
+    provided_by: runtime/observability
+    responsibility: |
+      Emit OpenTelemetry spans per tool execution and Machine transition. Provide
+      per-step observability without modifying the Machine or tools. Structured
+      logging via Go log/slog as fallback.
+    capabilities:
+      - OpenTelemetry span emission per dispatch cycle
+      - span correlation by trail id and execution id
+      - structured logging fallback via log/slog
+    references:
+      - prd027-trace-instrumentation
+
 design_decisions:
   - id: 1
-    title: Trail-scoped stash binding
-    decision: We bind each active trail to one stash version as the eligibility authority.
+    title: Machine as data, not code
+    decision: |
+      The agent's control flow is a YAML transition table, not imperative code.
+      States, signals, and transitions are data the Engine interprets. The Machine
+      has no logic, conditionals, or loops. This is the State Interpreter pattern.
     benefits:
-      - deterministic capability checks
-      - auditable policy scope
+      - static validation before execution — every state-signal pair exists, every
+        tool name resolves, every signal is handled
+      - auditable execution — the transition table is a reviewable artifact
+      - diffability — agent changes are YAML diffs, not code edits
+      - one binary interprets any agent whose YAML conforms to the schema
     alternatives_rejected:
-      - global allowlist with per-call exceptions
+      - imperative AgentLoopOrchestrator with if/elif branches (control flow buried
+        in code, not reviewable)
+      - LangGraph-style code conditions (cannot be statically validated without
+        execution)
 
   - id: 2
-    title: Typed decode before semantic validation
-    decision: We decode call args into typed Go structs before semantic checks.
+    title: Declarative Agent — three YAML layers
+    decision: |
+      The complete agent definition is three data files interpreted by a fixed
+      binary: Machine (transition table), Tool declarations (parameter types,
+      signals, undo modes), and Profile (model binding, budget, tool roots). This
+      is the Declarative Agent pattern.
     benefits:
-      - early structural failure detection
-      - clearer validation errors
+      - agent is a dataset, not a program — reviewable, versionable, swappable
+      - model swapping is a one-field edit in the Profile
+      - pre-deployment validation catches wiring errors before execution
+      - multiple agents run from one binary
     alternatives_rejected:
-      - schema-free map-only validation
+      - agent behaviour scattered across code, config, and deployment scripts
+      - separate binary per agent
 
   - id: 3
-    title: Execute-and-report baseline permission behavior
-    decision: We invoke and report exact runtime and OS failures as structured outcomes.
+    title: Typed signals with closed-world assumption
+    decision: |
+      Every tool declares a finite set of signals it can emit. The Machine must
+      handle every possible signal. An unhandled signal is a static load-time error,
+      caught before execution begins. This is the Tool Contract pattern.
     benefits:
-      - simpler initial runtime behavior
-      - no synthetic success semantics
+      - no ad hoc classification in Engine code — the Machine routes signals
+      - static validation catches wiring errors before any tool runs
+      - tools are opaque to the Machine — only name and signal set matter
     alternatives_rejected:
-      - mandatory preflight policy engine in first release
+      - untyped tool outcomes with runtime classification (ModelResponseRouter ad
+        hoc terminal vs actionable)
+      - open signal sets (no static validation possible)
 
   - id: 4
-    title: Explicit undo mode declaration
-    decision: Each tool descriptor must declare undo mode.
+    title: Per-state tool scoping
+    decision: |
+      Tool availability is driven by Machine state. The Machine declares which tools
+      can run in which states. Tools not declared for the current state cannot
+      execute. This is the Scoped Toolset pattern. The stash concept survives as the
+      mechanism for per-state tool scoping.
     benefits:
-      - realistic rollback guarantees
-      - explicit non-reversible behavior handling
+      - workflow invariants enforced by the Machine, not runtime checks
+      - deny-by-default — tools not in the current state's scope are rejected
+      - auditable tool availability per state
     alternatives_rejected:
-      - implicit rollback assumptions for all tools
+      - trail-scoped stash with no per-state granularity (coarser, allows tools
+        outside their intended state)
+      - global allowlist with per-call exceptions
 
   - id: 5
-    title: LLM-as-tool loop execution
-    decision: We register llm.generate as a tool and run it through the same invocation pipeline as all tools.
+    title: invoke_llm as boundary tool
+    decision: |
+      invoke_llm is a boundary tool declared in the Machine with its signal set
+      (LLMResponded, BudgetExceeded). The Engine dispatches it like any other tool.
+      The Model Adapter hides provider differences. This is the Model Adapter
+      pattern.
     benefits:
-      - one control path for validation, execution, and audit
+      - one dispatch path for all tools, including the LLM
       - consistent crumb semantics for model and non-model calls
+      - provider differences invisible to the Engine
+      - model swapping is a Profile edit, not a code change
     alternatives_rejected:
-      - special-case model branch outside tool runtime
+      - special-cased LLM branch outside the tool dispatch cycle
+      - provider-specific logic in the Engine
 
   - id: 6
-    title: Barebones first with configured tools
-    decision: We ship a minimal runtime with configured tools and defer MCP and subagent orchestration.
+    title: Per-tool Undo with Engine-driven rollback
+    decision: |
+      Each tool implements Execute and Undo. The Engine walks execution backward via
+      recorded crumbs, calling each tool's Undo with its recorded result. Read-only
+      tools make Undo a no-op. Undo mode (none, reversible, compensating, snapshot)
+      is declared in the tool contract. This is the Execution Rollback pattern.
     benefits:
-      - smaller operational surface
-      - faster implementation and validation
+      - realistic rollback — each tool defines what undoing means
+      - machine-level execution recording gives the Engine the ordered crumb list
+      - non-reversible tools are explicit, not assumed
     alternatives_rejected:
-      - full parity with existing open-source agent ecosystems in first release
+      - implicit rollback assumptions for all tools
+      - UndoManager separate from Engine dispatch (rollback is an Engine operation)
 
   - id: 7
-    title: Prompt references are stash and crumb data
-    decision: Prompt templates and fragments are selected via stash configuration and attached or referenced in crumbs.
+    title: Hexagonal dependency inversion
+    decision: |
+      The Engine depends on outbound ports (LLMInvocationPort,
+      WorkspaceDiscoveryReadPort, WorkspaceMutationPort, ValidationPort,
+      StateAuditPorts, TracePort). Driven adapters implement port contracts. The
+      driving adapter (StitchBoundaryAdapter) accepts orchestrator assignments.
     benefits:
-      - deterministic prompt provenance per loop turn
-      - trail-specific prompt behavior without global prompt library coupling
+      - lower coupling between Engine and infrastructure
+      - adapter replacement without Engine rewrites
+      - testable Engine with mock adapters
     alternatives_rejected:
-      - implicit global prompt library for all calls
+      - direct Engine dependency on provider and filesystem implementations
 
   - id: 8
-    title: Async LLM invocation without mandatory proxy
-    decision: LLMToolAdapter uses provider SDKs directly and supports async execution, timeouts, and failure handling.
-    benefits:
-      - simple deployment path
-      - preserves future option to add proxy later
-    alternatives_rejected:
-      - mandatory proxy service in initial architecture
-
-  - id: 12
-    title: Ollama-style LLM boundary with pre-parsed tool calls
+    title: OpenTelemetry trace instrumentation
     decision: |
-      The LLM object hides all provider-specific response mapping and returns
-      ToolCallIntent objects with syntactically valid JSON arguments. Like the
-      Ollama chat API, the caller never sees raw provider wire formats. The
-      LLMToolAdapter owns per-provider parsing (OpenAI function_call, Anthropic
-      tool_use, Ollama tool_calls) and guarantees that arguments leaving the
-      LLM boundary are well-formed JSON/YAML objects, not raw strings.
+      Observability uses OpenTelemetry spans per tool execution and Machine
+      transition. The TraceAdapter emits spans correlated by trail id and execution
+      id. Structured logging via log/slog is the fallback. This is the Trace
+      Instrumentation pattern.
     benefits:
-      - downstream components never re-parse raw JSON strings
-      - malformed-output errors are caught at the source
-      - provider differences are invisible to the agentic loop
-      - consistent with Ollama API contract where tool_calls.function.arguments is already a parsed object
+      - per-step observability without modifying the Machine or tools
+      - span correlation gives end-to-end execution traces
+      - compatible with existing observability infrastructure
     alternatives_rejected:
-      - pass raw arguments as strings and defer parsing to ToolCallInterpreter
-      - require downstream tools to handle provider-specific formats
+      - log/slog only (no per-step span structure)
+      - inline instrumentation in tools (couples observability to tool internals)
 
   - id: 9
     title: Orchestrator-owned multi-agent and git lifecycle
-    decision: Multi-agent coordination and git lifecycle management remain outside stitch runtime and are owned by the external orchestrator.
+    decision: |
+      Multi-agent coordination and git lifecycle management remain outside the
+      runtime and are owned by the external orchestrator. The runtime owns Machine
+      interpretation and tool dispatch.
     benefits:
-      - clear separation of concerns between orchestration and code generation
-      - smaller and more testable stitch runtime surface
+      - clear separation of concerns between orchestration and execution
+      - smaller and more testable runtime surface
     alternatives_rejected:
-      - embedding orchestrator responsibilities into stitch runtime
+      - embedding orchestrator responsibilities into the runtime
 
   - id: 10
-    title: Prompt-first Claude-like entry interface
-    decision: Stitch runtime exposes a prompt-first invoke interface and starts the internal loop upon invocation.
-    benefits:
-      - simple call contract for orchestrator integration
-      - clear lifecycle from invoke request to tool-driven loop execution
-    alternatives_rejected:
-      - multi-step external protocol to drive each loop turn manually
-
-  - id: 11
-    title: Hexagonal dependency inversion
-    decision: Runtime core depends only on inbound and outbound ports, while adapters implement concrete integrations.
-    benefits:
-      - lower coupling between domain logic and infrastructure
-      - adapter replacement without core rewrites
-    alternatives_rejected:
-      - direct core dependency on provider and filesystem implementations
-
-  - id: 13
     title: Orchestrator-owned isolation, runtime-owned path boundaries
     decision: |
       The cobbler orchestrator owns infrastructure isolation (podman containers,
-      network policy, filesystem mounts). The agent runtime is a Go library
-      invoked inside the container. It enforces workspace path boundaries on
-      mutation tools but does not create, manage, or assume any sandbox.
-      This matches the OpenHands and SWE-agent pattern where every orchestrated
-      agent delegates isolation to the deployment/orchestrator layer.
+      network policy, filesystem mounts). The agent runtime is a Go library invoked
+      inside the container. It enforces workspace path boundaries on mutation tools
+      but does not create, manage, or assume any sandbox.
     benefits:
       - agent library has no container or sandbox dependency
-      - isolation mechanism can change (podman, Docker, Kubernetes, bare metal) without agent changes
+      - isolation mechanism can change without agent changes
       - path boundary enforcement gives defence-in-depth inside the container
       - agent is testable without container infrastructure
     alternatives_rejected:
-      - agent-native sandboxing via seccomp or bubblewrap (claude-code CLI pattern, only appropriate for interactive CLI agents)
-      - no path enforcement at all (too risky even inside a container)
+      - agent-native sandboxing via seccomp or bubblewrap
+      - no path enforcement at all
 
-  - id: 14
+  - id: 11
     title: Agent as library invoked by cobbler
     decision: |
       The agent is a Go library package, not a standalone binary with its own
-      main(). The cobbler orchestrator imports and calls it. The entry point is
-      a function that takes configuration (provider, system prompt, workspace
-      path, tool allowlist) and a specification string, and returns when code
-      is produced or a blocker is reported. Observability uses standard Go
-      log/slog; cobbler reads logs from the shared logging infrastructure.
+      main(). The cobbler orchestrator imports and calls it. The entry point loads
+      the Machine and tool declarations, validates them, and enters the dispatch
+      loop.
     benefits:
       - no process boundary overhead between orchestrator and agent
       - orchestrator controls lifecycle, configuration injection, and teardown
-      - logging integrates with cobbler existing infrastructure (slog now, OpenTelemetry later)
       - simpler deployment (one binary, not two processes)
     alternatives_rejected:
-      - agent as separate process with RPC (goose ACP pattern, adds protocol complexity)
-      - agent as HTTP service (unnecessary for single-caller orchestrator)
+      - agent as separate process with RPC
+      - agent as HTTP service
 
-  - id: 15
+  - id: 12
+    title: Outcome classification taxonomy
+    decision: |
+      Execution outcomes are classified into a taxonomy: Clean (successful
+      completion), Recovery (completed after retries), Stuck (progress stalled),
+      Divergent (off-track). The Engine classifies the outcome on terminal state.
+      The orchestrator uses the classification to select a recovery strategy. This
+      is the Outcome Classifier pattern.
+    benefits:
+      - orchestrator gets a typed outcome, not a raw status code
+      - recovery decisions are data-driven, not heuristic
+      - degradation detection (prd024) is one signal within the taxonomy
+    alternatives_rejected:
+      - binary success/failure (no recovery or divergence signal)
+      - ad hoc status strings (no taxonomy, no static analysis)
+
+  - id: 13
     title: Tiered file editing — exact match then optional fuzzy fallback
     decision: |
-      edit_file uses a two-tier strategy. Tier 1 (prd022) is exact string
-      matching implemented with Go stdlib strings.Count and strings.Replace.
-      It ships in release 01.1 with zero external dependencies. Tier 2
-      (prd023) adds an optional fuzzy fallback using github.com/sergi/go-diff
-      (Go port of Google diff-match-patch) at Match_Threshold 0.95. It ships
-      in a later release behind a configuration flag (fuzzy_edit_enabled,
-      default false). Fuzzy matching activates only when exact match returns
-      edit_no_match, never on ambiguous matches. This mirrors the pattern
-      used by aider (Python dmp at 0.95) and opencode (same Go library).
+      edit_file uses a two-tier strategy. Tier 1 is exact string matching with Go
+      stdlib. Tier 2 adds an optional fuzzy fallback using
+      github.com/sergi/go-diff behind a configuration flag.
     benefits:
-      - release 01.1 ships with zero external dependencies for file editing
+      - zero external dependencies for exact matching
       - fuzzy fallback reduces wasted LLM round-trips on near-miss edits
-      - single external dependency (sergi/go-diff) is mature and used by opencode
       - fuzzy tier is behind a flag so it can be disabled in production
     alternatives_rejected:
-      - fuzzy-only from day one (unnecessary complexity for release 01.1)
-      - multi-tier aider-style cascade with git cherry-pick (diminishing returns, three additional dependencies)
-      - AST-aware matching (solves a different problem, doesn't help with LLM-generated text spans)
+      - fuzzy-only from day one
+      - multi-tier cascade with git cherry-pick
 
-  - id: 16
-    title: Loop trail branches_from orchestrator assignment crumb
+  - id: 14
+    title: Execution trail branches_from orchestrator assignment crumb
     decision: |
-      The LLM-tool loop runs inside its own crumbs trail. This trail is created
-      with a branches_from link to the assignment crumb in the orchestrator's
-      workflow trail. The loop runs in its own goroutine; invoke returns
-      immediately with the loop trail ID. The orchestrator observes outcome
-      by querying the loop trail state in the cupboard.
+      The dispatch loop runs inside its own crumbs trail. This trail is created with
+      a branches_from link to the assignment crumb in the orchestrator's workflow
+      trail. The loop runs in its own goroutine; invoke returns the trail ID
+      immediately. The orchestrator observes outcome by querying the trail state.
+    benefits:
+      - execution progress is observable without blocking the orchestrator
+      - trail branching uses crumbs' native branches_from link type
+      - orchestrator decides failure handling, not the Engine
+    alternatives_rejected:
+      - synchronous invoke that blocks until terminal state
+      - callback/channel notification
 
-      Each LLM response and tool result is a crumb in the loop trail. Token
-      usage is tracked in a stash scoped_to the trail. On success the trail
-      completes (crumbs cascade to pebble). On failure the trail is abandoned
-      (crumbs cascade to dust). The orchestrator reads the result crumb to
-      determine exit reason and decides the next action.
-    benefits:
-      - loop progress is observable without blocking the orchestrator
-      - trail branching uses crumbs' native branches_from and scoped_to link types
-      - completed/abandoned cascade gives clean pebble/dust semantics for audit
-      - orchestrator decides failure handling, not the loop
-    alternatives_rejected:
-      - synchronous invoke that blocks until loop finishes (prevents orchestrator concurrency)
-      - callback/channel notification (adds coupling; cupboard polling is sufficient)
-      - flat trail with no branching (loses the relationship to the orchestrator workflow)
-  - id: 17
-    title: Convergence detection via per-turn metrics and slope analysis
-    decision: |
-      The agent loop collects TurnMetrics after each turn: lines_changed,
-      tool_call_count, mutation_count, error_count, output_tokens. A sliding
-      window of recent turns is analyzed for two stall signals: (1) declining
-      edit volume detected via least-squares slope on lines_changed, and
-      (2) consecutive error turns indicating a fix-fail cycle. When either
-      signal fires, the loop exits with progress_stalled. The orchestrator
-      decides recovery strategy. Detection is optional and disabled by default.
-    benefits:
-      - detects LLM degradation that no reference agent (as of 2026-04) catches
-      - observe-only design — does not alter LLM context or tool availability
-      - orchestrator retains full control over recovery (retry, decompose, escalate)
-      - trivial implementation — linear regression on 3-8 data points, no libraries
-    alternatives_rejected:
-      - max_turns only (wastes remaining turns on unproductive work)
-      - injecting corrective prompts mid-loop (couples detection to recovery)
-      - token-rate monitoring alone (misses the edit-size signal)
-  - id: 18
+  - id: 15
     title: Language-agnostic agent with orchestrator-provided language context
     decision: |
-      The coding agent is language-agnostic. The orchestrator (cobbler)
-      determines the target programming language via workspace detection or
-      explicit configuration, then passes language and language_rules in the
-      AgentInvokeRequest. The system prompt template contains a
-      {language_rules} placeholder that the orchestrator fills with
-      language-specific conventions (idioms, naming, package layout, test
-      patterns). Mage remains the build system for all languages — the
-      orchestrator configures mage with language-appropriate targets via
-      magefile tags. The agent runtime itself is implemented in Go but does
-      not assume the generated code is Go.
+      The coding agent is language-agnostic. The orchestrator determines the target
+      programming language and passes language and language_rules in the
+      AgentInvokeRequest. The system prompt template contains a {language_rules}
+      placeholder. Mage remains the build system for all languages.
     benefits:
       - single agent runtime supports any language the orchestrator configures
-      - language rules live in constitutions owned by cobbler-scaffold, not the agent
+      - language rules live in constitutions, not the agent
       - no agent code changes needed to add a new language
-      - mage as universal build system simplifies the tool surface to one build_target tool
     alternatives_rejected:
-      - language detection inside the agent (duplicates orchestrator responsibility)
-      - separate agent binaries per language (unnecessary given prompt-driven behavior)
-      - hardcoded Go in the system prompt (prevents multi-language use)
-      - per-language build systems (mage can compile anything via tags)
+      - language detection inside the agent
+      - separate agent binaries per language
+      - hardcoded Go in the system prompt
 
 technology_choices:
   - component: Runtime language
     technology: Go
-    purpose: Typed contracts, interface boundaries, and deterministic runtime behavior.
+    purpose: Typed contracts, interface boundaries, and deterministic Engine behavior.
+  - component: Machine format
+    technology: YAML
+    purpose: Transition table as data — loadable, validatable, diffable.
+  - component: Tool declarations
+    technology: YAML
+    purpose: Tool contracts as data — parameter types, signals, undo modes.
   - component: Serialization
     technology: YAML and JSON
     purpose: Stash and call payload interchange.
-  - component: Validation strategy
-    technology: Typed struct decode plus tool-owned semantic validators
-    purpose: Clear separation of shape and semantic checks.
+  - component: Observability
+    technology: OpenTelemetry
+    purpose: Per-step span instrumentation for tool execution and Machine transitions.
   - component: Persistence model
     technology: Crumbs-compatible trail and crumb records
-    purpose: Auditable invocation and rollback history.
+    purpose: Auditable execution and rollback history.
 
 project_structure:
   - path: docs/VISION.yaml
@@ -520,11 +532,11 @@ project_structure:
     role: Validation suites mapped to use-case success criteria.
 
 implementation_status:
-  current_focus: Establish complete specification graph before code implementation.
+  current_focus: Re-align design docs to declarative agent patterns before code implementation.
   progress:
-    - item: Vision and architecture YAML drafted.
-    - item: Core PRDs for components, lifecycle, stash, invocation, and undo drafted.
-    - item: Use-case and test-suite specs pending.
+    - item: Vision and architecture YAML rewritten for State Interpreter and Declarative Agent patterns.
+    - item: PRDs being updated to reflect Engine, Machine, Registry, and Tool Contract.
+    - item: Use-case and test-suite specs pending alignment with declarative architecture.
 
 related_documents:
   - doc: VISION.yaml
@@ -532,9 +544,9 @@ related_documents:
   - doc: specs/component-catalog.yaml
     purpose: Canonical component list with responsibilities and dependency contracts.
   - doc: specs/interfaces/if001-llm-tool-adapter.yaml
-    purpose: Minimal async LLM invocation interface with prompt provenance and timeout semantics.
+    purpose: invoke_llm boundary tool interface with prompt provenance and signal emission.
   - doc: specs/interfaces/if002-agent-invoke-interface.yaml
-    purpose: Prompt-first invoke contract between orchestrator and stitch runtime.
+    purpose: Engine entry point contract between orchestrator and runtime.
   - doc: specs/interfaces/if003-workspace-discovery-read-port.yaml
     purpose: Port contract for find_files, find_text, and read_file operations.
   - doc: specs/interfaces/if004-workspace-mutation-port.yaml
@@ -546,8 +558,8 @@ related_documents:
   - doc: specs/interfaces/if007-message-history.yaml
     purpose: Trail-backed conversation history with crumbs-persisted messages.
   - doc: specs/interfaces/if008-tool-schemas.yaml
-    purpose: MCP-compatible tool schemas for the eight essential tools.
+    purpose: MCP-compatible tool schemas for the essential tools.
   - doc: specs/interfaces/if009-provider-config.yaml
     purpose: Ollama and AWS Bedrock provider configuration and client abstraction.
   - doc: specs/interfaces/if010-agent-loop-state-machine.yaml
-    purpose: Loop state machine with turn lifecycle, termination conditions, and trail model.
+    purpose: Machine data structure with states, signals, transitions, and terminal states.

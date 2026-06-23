@@ -1,0 +1,71 @@
+id: prd027-trace-instrumentation
+title: Trace Instrumentation
+
+problem: |
+  Agent execution is opaque without instrumentation. The execution record (crumbs)
+  is the semantic record for evaluators and auditors, but operators need a different
+  view: timed, hierarchical, cross-service, and visualizable in standard backends.
+  Without the Trace Instrumentation pattern, debugging falls back on ad hoc logging,
+  per-step timing is unavailable, and multi-agent executions cannot correlate into a
+  single distributed trace.
+
+goals:
+  - G1: Define a Tracer port that the Engine requires without importing OpenTelemetry.
+  - G2: Map each Engine transition to an OpenTelemetry span with a four-type span tree.
+  - G3: Define trace-context propagation across agent delegation boundaries.
+  - G4: Define adapter selection as configuration, not code.
+
+requirements:
+  R1:
+    title: Tracer Port
+    items:
+    - R1.1: Runtime must define a Tracer port declaring operations the Engine needs (start span, end span, record event, set attribute, propagate context).
+    - R1.2: Engine must not import OpenTelemetry SDK types directly; all telemetry goes through the Tracer port.
+    - R1.3: Adapters must implement the Tracer port: OTel adapter (OTLP/stdout/file exporters), NDJSON file adapter (CLI default), and no-op adapter (tests and benchmarks).
+    - R1.4: Adapter selection must be configuration-driven, not code-driven.
+  R2:
+    title: Span Tree
+    items:
+    - R2.1: Each execution must produce a span tree with four span types: agent.run (root), invoke_agent (engine-cycle iterations), chat (LLM invocations), and execute_tool (tool dispatches).
+    - R2.2: agent.run span must carry profile, machine, and budget attributes.
+    - R2.3: execute_tool spans must name the tool and record the returned signal.
+    - R2.4: Span hierarchy must mirror the Machine's structure.
+  R3:
+    title: Trace Context Propagation
+    items:
+    - R3.1: Trace context must propagate across agent delegation boundaries via W3C Trace Context.
+    - R3.2: Child executions must nest under the parent's trace, not start a new trace.
+    - R3.3: Boundary tools must carry the trace context into child executions.
+  R4:
+    title: Dual Record
+    items:
+    - R4.1: The execution record (crumbs) remains the semantic record for evaluators and auditors.
+    - R4.2: The OTel trace is the operational record for operators and SREs.
+    - R4.3: Both records come from the same execution; neither replaces the other.
+    - R4.4: Structured logging via log/slog must remain as a fallback when no Tracer adapter is configured.
+non_goals:
+  - Replace the crumb-based execution record with OTel traces.
+  - Define OTel collector or backend deployment configuration.
+  - Define custom span attributes beyond the four span types.
+
+semantic_model:
+  observe: "Engine dispatch cycles (state, signal, tool, result), tool execution durations, LLM invocation token counts, and agent delegation boundaries"
+  reason: "Start a root agent.run span per execution, nest invoke_agent spans per engine-cycle iteration, nest chat and execute_tool spans per LLM invocation and tool dispatch, propagate trace context across delegation boundaries, and route telemetry through the Tracer port to the configured adapter"
+  produce: "Hierarchical OpenTelemetry span tree with four span types, W3C trace context propagated to child executions, and structured logging fallback via log/slog"
+
+acceptance_criteria:
+  - id: AC1
+    criterion: Tracer port is defined with start/end span, record event, set attribute, and propagate context operations, and Engine does not import OTel SDK types.
+    traces: [R1.1, R1.2]
+  - id: AC2
+    criterion: OTel, NDJSON file, and no-op adapters implement the Tracer port with configuration-driven selection.
+    traces: [R1.3, R1.4]
+  - id: AC3
+    criterion: Each execution produces a four-type span tree (agent.run, invoke_agent, chat, execute_tool) mirroring the Machine structure.
+    traces: [R2.1, R2.2, R2.3, R2.4]
+  - id: AC4
+    criterion: Trace context propagates across delegation boundaries via W3C Trace Context, and child executions nest under the parent trace.
+    traces: [R3.1, R3.2, R3.3]
+  - id: AC5
+    criterion: Execution crumbs remain the semantic record and OTel traces the operational record, with log/slog fallback.
+    traces: [R4.1, R4.2, R4.3, R4.4]

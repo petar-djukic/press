@@ -1,30 +1,76 @@
 id: component-catalog
-title: Agent Runtime Component Catalog
+title: Declarative Agent Runtime Component Catalog
 
 purpose: |
-  Define the canonical runtime components, their responsibilities, contracts,
-  dependencies, and ownership boundaries.
+  Define the canonical runtime components for the declarative agent architecture,
+  their responsibilities, contracts, dependencies, and ownership boundaries.
 
 components:
-  - id: C13
-    name: StitchBoundaryAdapter
-    domain: integration
-    responsibility: Bridge orchestrator assignments to stitch runtime execution context and return stitch results.
-    provides:
-      - accept_assignment
-      - build_execution_context
-      - invoke_with_prompt
-      - emit_execution_result
-    consumes:
-      - AgentLoopOrchestrator for runtime execution
-      - CrumbLedger for execution summary extraction
-    dependencies:
-      - specs/use-cases/uc002-orchestrator-stitch-boundary.yaml
-
   - id: C01
+    name: Engine
+    domain: core
+    responsibility: Interpret the Machine. Run the dispatch loop, resolve tools through the Registry, record crumbs, and route signals to transitions.
+    provides:
+      - run
+      - resume
+      - rollback
+      - history
+      - classify_outcome
+    consumes:
+      - Machine for transition lookup
+      - Registry for tool resolution
+      - CrumbLedger for execution recording
+    dependencies:
+      - prd001-tool-system-components-interfaces
+
+  - id: C02
+    name: Machine
+    domain: data
+    responsibility: Pure data structure mapping (state, signal) to (next_state, action). No logic, conditionals, or loops.
+    provides:
+      - transitions
+      - initial_state
+      - terminal_states
+      - per_state_tool_visibility
+    consumes:
+      - none
+    dependencies:
+      - prd002-trail-lifecycle-state-machine
+
+  - id: C03
+    name: Registry
+    domain: tools
+    responsibility: Resolve tool names to implementations at load time. Hold tool declarations with parameter types, signal sets, undo modes, and side effects.
+    provides:
+      - resolve_tool
+      - get_declaration
+      - list_tools
+      - validate_signals
+    consumes:
+      - none
+    dependencies:
+      - prd001-tool-system-components-interfaces
+      - prd004-tool-invocation-validation
+
+  - id: C04
+    name: ToolContractValidator
+    domain: validation
+    responsibility: Validate tool declarations against the Machine at load time. Check signal completeness, tool name resolution, and parameter type matching.
+    provides:
+      - validate_machine_against_tools
+      - check_signal_completeness
+      - verify_tool_resolution
+      - check_parameter_types
+    consumes:
+      - Machine for transition references
+      - Registry for tool declarations
+    dependencies:
+      - prd004-tool-invocation-validation
+
+  - id: C05
     name: TrailManager
     domain: lifecycle
-    responsibility: Own trail lifecycle transitions and stash binding.
+    responsibility: Own execution trail lifecycle and stash binding.
     provides:
       - create_trail
       - activate_trail
@@ -32,278 +78,140 @@ components:
       - abandon_trail
     consumes:
       - CrumbLedger for transition events
-      - StashManager for activation guard checks
     dependencies:
       - prd002-trail-lifecycle-state-machine
 
-  - id: C02
-    name: StashManager
-    domain: policy
-    responsibility: Resolve active stash and evaluate tool eligibility.
+  - id: C06
+    name: StitchBoundaryAdapter
+    domain: integration
+    responsibility: Translate orchestrator assignment envelopes to internal execution context. Load Machine and tool declarations, start the Engine, and return execution results.
     provides:
-      - resolve_active_stash
-      - is_tool_enabled
-      - get_tool_policy_mode
+      - accept_assignment
+      - load_machine_and_tools
+      - start_engine
+      - emit_execution_result
     consumes:
-      - ToolRegistry for descriptor reconciliation
-      - CrumbLedger for availability decision records
+      - Engine for dispatch loop execution
+      - CrumbLedger for execution summary extraction
     dependencies:
-      - prd003-tool-stash-availability
+      - specs/use-cases/rel01.0-uc002-orchestrator-stitch-boundary.yaml
 
-  - id: C03
-    name: ToolRegistry
-    domain: metadata
-    responsibility: Maintain tool descriptors and adapter bindings.
-    provides:
-      - get_descriptor
-      - list_descriptors
-      - get_undo_mode
-      - resolve_adapter
-    consumes:
-      - none
-    dependencies:
-      - prd001-tool-system-components-interfaces
-
-  - id: C12
+  - id: C07
     name: LLMToolAdapter
     domain: tools
     responsibility: |
-      Execute llm.generate against configured providers with built-in instrumentation.
-      Hide all provider-specific wire formats (OpenAI function_call, Anthropic tool_use,
-      Ollama tool_calls). Parse raw model output into ToolCallIntent objects with
-      syntactically valid JSON arguments before returning to the caller. Operates like
-      the Ollama chat API: the caller receives a clean tool_calls list, never raw
-      provider responses.
+      Implement the invoke_llm boundary tool. Build prompts from stash references
+      and crumb context via PromptAssembler. Invoke configured LLM providers through
+      ProviderAdapter. Parse responses via ResponseParser. Emit LLMResponded or
+      BudgetExceeded signals.
     provides:
-      - compose_prompt_from_crumb_and_stash
-      - invoke_provider_async
-      - parse_tool_calls
-      - enforce_provider_timeout
-      - record_provider_metrics
-      - normalize_provider_failure
+      - execute
+      - undo
+      - compose_prompt
+      - invoke_provider
+      - parse_response
     consumes:
-      - ToolRegistry for provider binding and model configuration
-      - StashManager for prompt reference resolution
+      - Registry for tool declaration
       - CrumbLedger for prompt reference and result metadata persistence
     dependencies:
-      - prd001-tool-system-components-interfaces
+      - prd006-stitch-essential-toolset
       - prd004-tool-invocation-validation
 
-  - id: C04
-    name: ToolCallInterpreter
-    domain: invocation
-    responsibility: Normalize provider-native and parsed outputs into canonical ToolCall.
-    provides:
-      - normalize_tool_call
-      - assign_call_correlation
-    consumes:
-      - ToolRegistry for descriptor verification
-    dependencies:
-      - prd001-tool-system-components-interfaces
-      - prd004-tool-invocation-validation
-
-  - id: C05
-    name: InvocationValidator
-    domain: validation
-    responsibility: Enforce validation order from availability to semantic checks.
-    provides:
-      - validate_availability
-      - decode_typed_args
-      - validate_semantics
-    consumes:
-      - StashManager for availability decisions
-      - ToolRegistry for schemas and validators
-    dependencies:
-      - prd004-tool-invocation-validation
-
-  - id: C06
-    name: PermissionExecutor
-    domain: execution
-    responsibility: Execute validated calls and return structured runtime failures.
-    provides:
-      - execute_call
-      - execute_call_async
-      - enforce_execution_timeout
-      - map_runtime_failure
-    consumes:
-      - ToolRegistry for adapter execution binding
-      - ToolEventBus for execution announcements
-    dependencies:
-      - prd004-tool-invocation-validation
-
-  - id: C07
+  - id: C08
     name: CrumbLedger
     domain: audit
-    responsibility: Persist primary, rejection, and undo crumbs with correlations.
+    responsibility: Persist execution and undo outcomes as crumbs. Each dispatch cycle records state, signal, tool, and result metadata.
     provides:
-      - write_invocation_crumb
+      - write_execution_crumb
       - write_rejection_crumb
       - write_undo_crumb
       - query_trail_crumbs
     consumes:
-      - ToolEventBus events
-    dependencies:
-      - prd001-tool-system-components-interfaces
-      - prd005-undo-and-compensation
-
-  - id: C08
-    name: UndoManager
-    domain: recovery
-    responsibility: Plan and execute reverse-order undo and compensation.
-    provides:
-      - build_undo_plan
-      - execute_undo_plan
-      - summarize_rollback
-    consumes:
-      - CrumbLedger for source crumbs and undo records
-      - ToolRegistry for mode and undo adapter resolution
-    dependencies:
-      - prd005-undo-and-compensation
-
-  - id: C09
-    name: ToolEventBus
-    domain: observability
-    responsibility: Emit lifecycle announcements for selection, validation, execution, and rollback.
-    provides:
-      - emit_tool_call_received
-      - emit_validation_rejected
-      - emit_invocation_succeeded
-      - emit_invocation_failed
-      - emit_undo_step_result
-    consumes:
       - none
     dependencies:
       - prd001-tool-system-components-interfaces
+      - prd005-undo-and-compensation
+
+  - id: C09
+    name: UndoManager
+    domain: recovery
+    responsibility: Walk execution backward via recorded crumbs, calling each tool's Undo with its recorded result. Report success, failure, skipped, and non-reversible counts.
+    provides:
+      - walk_backward
+      - call_undo
+      - summarize_rollback
+    consumes:
+      - CrumbLedger for source crumbs and undo records
+      - Engine for rollback dispatch
+    dependencies:
+      - prd005-undo-and-compensation
 
   - id: C10
-    name: AgentLoopOrchestrator
-    domain: orchestration
-    responsibility: Receive prompt input, map prompt to trail context, and drive iterative loop turns.
+    name: TraceAdapter
+    domain: observability
+    responsibility: Emit OpenTelemetry spans per tool execution and Machine transition. Provide per-step observability without modifying the Machine or tools.
     provides:
-      - receive_prompt
-      - map_prompt_to_trail
-      - start_loop_turn
-      - finish_loop_turn
+      - start_span
+      - end_span
+      - record_event
+      - set_attribute
+      - propagate_context
     consumes:
-      - TrailManager for trail lookup and lifecycle guards
-      - ToolCallInterpreter for canonical LLM tool call normalization
-      - InvocationValidator for loop-turn validation flow
-      - PermissionExecutor for loop-turn execution
-      - ModelResponseRouter for post-LLM branch mapping
+      - Engine dispatch events
     dependencies:
-      - prd002-trail-lifecycle-state-machine
-      - prd004-tool-invocation-validation
-
-  - id: C11
-    name: ModelResponseRouter
-    domain: orchestration
-    responsibility: Map LLM tool output to either crumb insertion or next tool invocation.
-    provides:
-      - classify_llm_output
-      - map_to_crumb_insert
-      - map_to_next_invocation
-    consumes:
-      - CrumbLedger for insertion records
-      - ToolCallInterpreter for next-call normalization
-      - ToolEventBus for branch announcements
-    dependencies:
-      - prd001-tool-system-components-interfaces
-      - prd004-tool-invocation-validation
+      - prd027-trace-instrumentation
 
 contracts:
   entry_interface:
     method: invoke
-    shape: invoke(prompt, assignment_id, trail_id)
+    shape: invoke(prompt, assignment_id, trail_id, machine_ref, tool_roots)
     behavior:
       - Called after orchestrator environment and tool configuration are complete.
-      - Starts loop execution within AgentLoopOrchestrator.
-      - Returns terminal output and execution summary envelope.
+      - Loads Machine and tool declarations, validates against each other.
+      - Starts Engine dispatch loop.
+      - Returns execution trail ID immediately.
   sequencing:
-    - StitchBoundaryAdapter accepts orchestrator assignment before loop start
-    - StitchBoundaryAdapter initializes stitch context before AgentLoopOrchestrator receives prompt
-    - StitchBoundaryAdapter invoke_with_prompt starts AgentLoopOrchestrator loop
-    - AgentLoopOrchestrator receives prompt before any loop tool call
-    - AgentLoopOrchestrator maps prompt to trail before LLM invocation
-    - AgentLoopOrchestrator invokes LLM through the same interpreter, validator, and executor pipeline as any tool
-    - LLMToolAdapter composes prompt from crumb context and stash references before provider invocation
-    - LLMToolAdapter executes provider calls asynchronously with timeout and failure normalization
-    - ToolCallInterpreter before InvocationValidator
-    - InvocationValidator before PermissionExecutor
-    - PermissionExecutor LLM result before ModelResponseRouter branch decision
-    - ModelResponseRouter maps to crumb insertion or next invocation before next loop turn
-    - PermissionExecutor before CrumbLedger primary write
+    - StitchBoundaryAdapter accepts orchestrator assignment before Engine start
+    - StitchBoundaryAdapter loads Machine and tool declarations before validation
+    - ToolContractValidator validates Machine against tool signal sets before any dispatch
+    - Engine enters initial state before first tool dispatch
+    - Engine resolves tool through Registry before Execute
+    - LLMToolAdapter composes prompt before provider invocation
+    - Engine records crumb after each committed transition
+    - Engine routes signal to next transition via Machine lookup
+    - Engine classifies outcome on terminal state
     - UndoManager after trail abandon or explicit rollback request
   invariants:
-    - Stitch runtime does not execute git lifecycle operations.
-    - Stitch runtime does not coordinate multiple peer agents.
-    - LLM is represented as a tool descriptor and never bypasses tool contracts.
-    - LLM provider instrumentation is owned by LLMToolAdapter, not by a separate proxy component.
-    - Prompt fragments are configured in stash and referenced or attached in crumbs.
-    - Every loop turn has one LLM invocation attempt crumb.
-    - Every LLM result is mapped to exactly one branch decision.
-    - No component bypasses stash availability checks.
-    - No execution occurs after decode or semantic validation failure.
-    - Every invocation attempt results in exactly one primary crumb.
+    - Runtime does not execute git lifecycle operations.
+    - Runtime does not coordinate multiple peer agents.
+    - invoke_llm is a boundary tool declared in the Machine, never special-cased in Engine code.
+    - Every signal a tool emits is handled by the Machine.
+    - Every dispatch cycle produces exactly one crumb.
+    - No tool executes unless declared in the current state's visibility list.
+    - Machine validation runs at load time, before any tool executes.
     - Every undo step produces an undo result record.
-
-agentic_loop:
-  canonical_flow:
-    - step: 1
-      action: Receive prompt
-      owner: AgentLoopOrchestrator
-      output: prompt envelope with correlation id
-    - step: 2
-      action: Map prompt to trail
-      owner: AgentLoopOrchestrator
-      output: active trail id or newly created trail id
-    - step: 3
-      action: Invoke LLM as tool call
-      owner: AgentLoopOrchestrator
-      output: canonical ToolCall with tool_name llm.generate
-    - step: 4
-      action: Execute standard validation and invocation pipeline
-      owner: ToolCallInterpreter, InvocationValidator, PermissionExecutor, LLMToolAdapter
-      output: structured LLM tool result
-    - step: 5
-      action: Route model response
-      owner: ModelResponseRouter
-      output: branch decision
-  branch_rules:
-    - condition: LLM output has no executable tool call intents
-      branch: crumb_insertion
-      effects:
-        - insert output crumb
-        - emit loop turn completed event
-    - condition: LLM output has executable tool call intents
-      branch: next_crumb_invocation
-      effects:
-        - normalize next tool call
-        - enqueue next invocation crumb
-        - continue loop turn
 
 ownership_model:
   runtime_core:
-    - AgentLoopOrchestrator
+    - Engine
+    - Machine
+    - Registry
+    - ToolContractValidator
     - TrailManager
-    - ToolCallInterpreter
-    - InvocationValidator
-    - PermissionExecutor
-    - ModelResponseRouter
     - UndoManager
   runtime_services:
     - StitchBoundaryAdapter
-    - StashManager
-    - ToolRegistry
     - LLMToolAdapter
     - CrumbLedger
-    - ToolEventBus
+    - TraceAdapter
 
 hexagonal_classification:
   core_domain_services:
-    - AgentLoopOrchestrator
+    - Engine
+    - Machine
+    - Registry
+    - ToolContractValidator
     - TrailManager
-    - InvocationValidator
-    - ModelResponseRouter
     - UndoManager
   inbound_ports:
     - AgentInvokePort
@@ -313,6 +221,7 @@ hexagonal_classification:
     - WorkspaceMutationPort
     - ValidationPort
     - StateAuditPorts
+    - TracePort
   driving_adapters:
     - StitchBoundaryAdapter
   driven_adapters:
@@ -321,47 +230,46 @@ hexagonal_classification:
     - WorkspaceMutationAdapter
     - ValidationAdapter
     - StateAuditAdapter
+    - TraceAdapter
   dependency_rule:
     - Core depends on ports only.
     - Adapters implement ports and isolate infrastructure specifics.
 
 wiring_map:
   inbound:
-    - StitchBoundaryAdapter -> AgentInvokePort -> AgentLoopOrchestrator
+    - StitchBoundaryAdapter -> AgentInvokePort -> Engine
   outbound:
-    - AgentLoopOrchestrator -> LLMInvocationPort -> LLMToolAdapter
-    - AgentLoopOrchestrator -> WorkspaceDiscoveryReadPort -> WorkspaceDiscoveryAdapter
-    - AgentLoopOrchestrator -> WorkspaceMutationPort -> WorkspaceMutationAdapter
-    - AgentLoopOrchestrator -> ValidationPort -> ValidationAdapter
-    - AgentLoopOrchestrator -> StateAuditPorts -> StateAuditAdapter
+    - Engine -> LLMInvocationPort -> LLMToolAdapter
+    - Engine -> WorkspaceDiscoveryReadPort -> WorkspaceDiscoveryAdapter
+    - Engine -> WorkspaceMutationPort -> WorkspaceMutationAdapter
+    - Engine -> ValidationPort -> ValidationAdapter
+    - Engine -> StateAuditPorts -> StateAuditAdapter
+    - Engine -> TracePort -> TraceAdapter
 
 minimal_profile:
   included_now:
+    - Engine
+    - Machine
+    - Registry
+    - ToolContractValidator
     - TrailManager
-    - StashManager
-    - ToolRegistry
+    - StitchBoundaryAdapter
     - LLMToolAdapter
-    - ToolCallInterpreter
-    - InvocationValidator
-    - PermissionExecutor
-    - AgentLoopOrchestrator
-    - ModelResponseRouter
     - CrumbLedger
     - UndoManager
-    - ToolEventBus
+    - TraceAdapter
   assumptions:
     - Orchestrator performs multi-agent assignment and coordination.
     - Orchestrator prepares environment before invoke.
     - Orchestrator configures allowed tools before invoke.
     - Orchestrator performs git branch and merge management.
-    - Tool set is pre-configured.
+    - Machine and tool declarations are YAML files.
     - MCP integration is not required for first delivery.
-    - CLI tool invocation can be added as a standard tool adapter.
   deferred_or_optional:
-    - SubAgentExecutor as an optional tool.
+    - Agent Delegation (prd028) as non-terminal boundary tools.
+    - Approval Gate (prd029) as Machine transition.
+    - Runtime Probe (prd030) as control-plane server.
     - MCPInvokeTool as a configurable integration tool.
-    - CLITool as a configurable shell adapter tool.
-    - Provider proxy service if direct SDK calls become insufficient.
 
 status:
   component_catalog: complete
@@ -373,6 +281,7 @@ status:
     - if004-workspace-mutation-port
     - if005-validation-port
     - if006-state-and-audit-ports
+    - if010-agent-loop-state-machine
   contract_test_suites:
     - ts001-ports-and-adapters-contracts
   implementation_bindings: pending

@@ -1,26 +1,27 @@
 id: if010-agent-loop-state-machine
-title: Agent Loop State Machine
-component: AgentLoopOrchestrator
+title: Machine Data Structure
+component: Engine
 
 purpose: |
-  Define the state machine for the LLM-tool interaction loop that drives
-  code generation. The loop runs inside a trail that branches_from a crumb
-  in the orchestrator's workflow trail. Each turn consists of one LLM call
-  followed by execution of all returned tool calls. The loop terminates on
-  explicit conditions and reports its outcome via the trail state and a
-  result crumb.
+  Define the Machine data structure that the Engine interprets. The Machine is a
+  pure data structure mapping (state, signal) to (next_state, action) with no
+  logic, conditionals, or loops. States are inert markers of position. Signals are
+  typed tool outcomes. Transitions route signals to the next state and tool.
+  Terminal states halt execution with outcome classification.
 
-  The loop does not decide what to do about failures. It reports them.
-  The orchestrator reads the trail state and result crumb from the cupboard
-  and decides the next action (retry with different spec, break down work,
-  give up).
+  The Engine is a fixed dispatch loop that consults the Machine, resolves tools
+  through the Registry, calls Execute, records crumbs, and routes returned signals.
+  The Engine does not decide what to do about failures. It reports them via
+  outcome classification. The orchestrator reads the trail state and result crumb
+  from the cupboard and decides the next action.
 
 dependencies:
   - LLMToolAdapter
-  - ToolRegistry
+  - Registry
   - WorkspaceMutationPort
   - MessageHistory (if007)
   - CrumbLedger (if006)
+  - TracePort (prd027)
 
 types:
   LoopConfig:
