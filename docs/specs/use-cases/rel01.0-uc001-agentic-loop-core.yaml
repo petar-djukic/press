@@ -8,16 +8,16 @@ actor: Orchestrator invoking the runtime Engine for code generation
 trigger: Orchestrator sends an assignment envelope with a prompt and trail reference
 flow:
   - F1: "Receive orchestrator assignment envelope and initialize execution context [StitchBoundaryAdapter]"
-  - F2: "Load Machine and tool declarations, validate Machine against tool signal sets [StitchBoundaryAdapter, Registry]"
-  - F3: "Create execution trail with branches_from link to assignment crumb [TrailManager]"
-  - F4: "Enter initial state and start dispatch cycle [Engine]"
-  - F5: "Dispatch invoke_llm boundary tool with state-filtered manifest [Engine, LLMToolAdapter]"
-  - F6: "LLMToolAdapter composes prompt, invokes provider, parses response into ToolCallIntent [LLMToolAdapter]"
-  - F7: "invoke_llm returns LLMResponded signal, Engine routes to next transition [Engine]"
-  - F8: "Dynamic dispatch ($tool): Engine resolves model-selected tool through Registry [Engine, Registry]"
-  - F9: "Tool Execute returns typed signal, Engine records crumb and routes to next transition [Engine, CrumbLedger]"
-  - F10: "Terminal state reached: Engine classifies outcome (Clean, Recovery, Stuck, Divergent) [Engine]"
-  - F11: "Result crumb written, trail transitions to completed or abandoned [CrumbLedger, TrailManager]"
+  - F2: "Load Machine and tool declarations, validate Machine against tool signal sets (requires assignment from F1) [StitchBoundaryAdapter, Registry]"
+  - F3: "Create execution trail with branches_from link to assignment crumb (requires validated context from F2) [TrailManager]"
+  - F4: "Enter initial state and start dispatch cycle (requires active trail from F3) [Engine]"
+  - F5: "Dispatch invoke_llm boundary tool with state-filtered manifest (requires Engine running from F4) [Engine, LLMToolAdapter]"
+  - F6: "LLMToolAdapter composes prompt, invokes provider, parses response into ToolCallIntent (requires manifest from F5) [LLMToolAdapter]"
+  - F7: "invoke_llm returns LLMResponded signal, Engine routes to next transition (requires parsed response from F6) [Engine]"
+  - F8: "Dynamic dispatch ($tool): Engine resolves model-selected tool through Registry (requires signal routing from F7) [Engine, Registry]"
+  - F9: "Tool Execute returns typed signal, Engine records crumb and routes to next transition (requires tool resolution from F8) [Engine, CrumbLedger]"
+  - F10: "Terminal state reached: Engine classifies outcome (Clean, Recovery, Stuck, Divergent) (requires dispatch cycle completion from F9) [Engine]"
+  - F11: "Result crumb written, trail transitions to completed or abandoned (requires outcome from F10) [CrumbLedger, TrailManager]"
   - F12: "Error — Machine validation fails at load time: reject invocation before any tool executes"
   - F13: "Error — invoke_llm times out or fails: BudgetExceeded or error signal routed by Machine"
 touchpoints:
@@ -30,23 +30,19 @@ touchpoints:
   - T7: "Machine — transition table with states, signals, and terminal states (srd002-trail-lifecycle-state-machine R1, R2)"
 success_criteria:
   - id: S1
-    criterion: Exactly one invoke_llm dispatch crumb exists per Engine cycle iteration
+    criterion: Each Engine cycle iteration produces exactly one invoke_llm dispatch crumb and routes the returned signal to the next Machine transition without ad hoc classification
     traces:
       - srd001-tool-system-components-interfaces AC1
   - id: S2
-    criterion: Engine routes signals to transitions via Machine lookup with no ad hoc classification
-    traces:
-      - srd001-tool-system-components-interfaces AC1
-  - id: S3
-    criterion: Prompt provenance for the dispatch cycle is reconstructable from stash references or crumb attachments
+    criterion: Prompt provenance for the dispatch cycle is reconstructable from stash references or crumb attachments, integrating prompt assembly with trail audit
     traces:
       - srd006-stitch-essential-toolset AC2
-  - id: S4
-    criterion: Execution trail remains auditable for replay and rollback planning
+  - id: S3
+    criterion: Execution trail remains auditable for replay and rollback planning across the full dispatch cycle from initial state to terminal
     traces:
       - srd002-trail-lifecycle-state-machine AC5
-  - id: S5
-    criterion: Engine classifies outcome on terminal state and returns result to orchestrator without git operations
+  - id: S4
+    criterion: Engine classifies outcome on terminal state and returns result to orchestrator without git operations, integrating outcome classification with the orchestrator boundary
     traces:
       - srd001-tool-system-components-interfaces AC1
 test_suite: test-rel01.0
