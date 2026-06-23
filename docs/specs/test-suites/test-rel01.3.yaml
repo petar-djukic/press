@@ -9,8 +9,8 @@ test_cases:
   - use_case: rel01.3-uc004-comparative-conformance-evaluation
     name: Runtime meets conformance baselines
     traces:
-      - prd021-comparative-agent-conformance-baseline AC1
+      - srd021-comparative-agent-conformance-baseline AC1
     inputs:
-      - "Conformance baseline requirements from prd021"
+      - "Conformance baseline requirements from srd021"
     expected:
       - "Runtime meets or exceeds baseline capabilities"

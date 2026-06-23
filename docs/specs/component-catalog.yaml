@@ -21,7 +21,7 @@ components:
       - Registry for tool resolution
       - CrumbLedger for execution recording
     dependencies:
-      - prd001-tool-system-components-interfaces
+      - srd001-tool-system-components-interfaces
 
   - id: C02
     name: Machine
@@ -35,7 +35,7 @@ components:
     consumes:
       - none
     dependencies:
-      - prd002-trail-lifecycle-state-machine
+      - srd002-trail-lifecycle-state-machine
 
   - id: C03
     name: Registry
@@ -49,8 +49,8 @@ components:
     consumes:
       - none
     dependencies:
-      - prd001-tool-system-components-interfaces
-      - prd004-tool-invocation-validation
+      - srd001-tool-system-components-interfaces
+      - srd004-tool-invocation-validation
 
   - id: C04
     name: ToolContractValidator
@@ -65,7 +65,7 @@ components:
       - Machine for transition references
       - Registry for tool declarations
     dependencies:
-      - prd004-tool-invocation-validation
+      - srd004-tool-invocation-validation
 
   - id: C05
     name: TrailManager
@@ -79,7 +79,7 @@ components:
     consumes:
       - CrumbLedger for transition events
     dependencies:
-      - prd002-trail-lifecycle-state-machine
+      - srd002-trail-lifecycle-state-machine
 
   - id: C06
     name: StitchBoundaryAdapter
@@ -114,8 +114,8 @@ components:
       - Registry for tool declaration
       - CrumbLedger for prompt reference and result metadata persistence
     dependencies:
-      - prd006-stitch-essential-toolset
-      - prd004-tool-invocation-validation
+      - srd006-stitch-essential-toolset
+      - srd004-tool-invocation-validation
 
   - id: C08
     name: CrumbLedger
@@ -129,8 +129,8 @@ components:
     consumes:
       - none
     dependencies:
-      - prd001-tool-system-components-interfaces
-      - prd005-undo-and-compensation
+      - srd001-tool-system-components-interfaces
+      - srd005-undo-and-compensation
 
   - id: C09
     name: UndoManager
@@ -144,7 +144,7 @@ components:
       - CrumbLedger for source crumbs and undo records
       - Engine for rollback dispatch
     dependencies:
-      - prd005-undo-and-compensation
+      - srd005-undo-and-compensation
 
   - id: C10
     name: TraceAdapter
@@ -159,7 +159,7 @@ components:
     consumes:
       - Engine dispatch events
     dependencies:
-      - prd027-trace-instrumentation
+      - srd027-trace-instrumentation
 
 contracts:
   entry_interface:
@@ -266,9 +266,9 @@ minimal_profile:
     - Machine and tool declarations are YAML files.
     - MCP integration is not required for first delivery.
   deferred_or_optional:
-    - Agent Delegation (prd028) as non-terminal boundary tools.
-    - Approval Gate (prd029) as Machine transition.
-    - Runtime Probe (prd030) as control-plane server.
+    - Agent Delegation (srd028) as non-terminal boundary tools.
+    - Approval Gate (srd029) as Machine transition.
+    - Runtime Probe (srd030) as control-plane server.
     - MCPInvokeTool as a configurable integration tool.
 
 status:

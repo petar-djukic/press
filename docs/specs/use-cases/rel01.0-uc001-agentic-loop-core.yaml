@@ -21,32 +21,32 @@ flow:
   - F12: "Error — Machine validation fails at load time: reject invocation before any tool executes"
   - F13: "Error — invoke_llm times out or fails: BudgetExceeded or error signal routed by Machine"
 touchpoints:
-  - T1: "StitchBoundaryAdapter — assignment envelope validation and Engine startup (prd001-tool-system-components-interfaces R1, R3)"
-  - T2: "Engine — dispatch cycle interpreting Machine transitions (prd001-tool-system-components-interfaces R1, R4)"
-  - T3: "TrailManager — execution trail creation and activation (prd002-trail-lifecycle-state-machine R4)"
-  - T4: "Registry — tool name resolution and signal set validation (prd001-tool-system-components-interfaces R3, R4)"
-  - T5: "LLMToolAdapter — invoke_llm boundary tool with prompt assembly and provider invocation (prd006-stitch-essential-toolset R2)"
-  - T6: "CrumbLedger — execution crumb persistence per dispatch cycle (prd001-tool-system-components-interfaces R5)"
-  - T7: "Machine — transition table with states, signals, and terminal states (prd002-trail-lifecycle-state-machine R1, R2)"
+  - T1: "StitchBoundaryAdapter — assignment envelope validation and Engine startup (srd001-tool-system-components-interfaces R1, R3)"
+  - T2: "Engine — dispatch cycle interpreting Machine transitions (srd001-tool-system-components-interfaces R1, R4)"
+  - T3: "TrailManager — execution trail creation and activation (srd002-trail-lifecycle-state-machine R4)"
+  - T4: "Registry — tool name resolution and signal set validation (srd001-tool-system-components-interfaces R3, R4)"
+  - T5: "LLMToolAdapter — invoke_llm boundary tool with prompt assembly and provider invocation (srd006-stitch-essential-toolset R2)"
+  - T6: "CrumbLedger — execution crumb persistence per dispatch cycle (srd001-tool-system-components-interfaces R5)"
+  - T7: "Machine — transition table with states, signals, and terminal states (srd002-trail-lifecycle-state-machine R1, R2)"
 success_criteria:
   - id: S1
     criterion: Exactly one invoke_llm dispatch crumb exists per Engine cycle iteration
     traces:
-      - prd001-tool-system-components-interfaces AC1
+      - srd001-tool-system-components-interfaces AC1
   - id: S2
     criterion: Engine routes signals to transitions via Machine lookup with no ad hoc classification
     traces:
-      - prd001-tool-system-components-interfaces AC1
+      - srd001-tool-system-components-interfaces AC1
   - id: S3
     criterion: Prompt provenance for the dispatch cycle is reconstructable from stash references or crumb attachments
     traces:
-      - prd006-stitch-essential-toolset AC2
+      - srd006-stitch-essential-toolset AC2
   - id: S4
     criterion: Execution trail remains auditable for replay and rollback planning
     traces:
-      - prd002-trail-lifecycle-state-machine AC5
+      - srd002-trail-lifecycle-state-machine AC5
   - id: S5
     criterion: Engine classifies outcome on terminal state and returns result to orchestrator without git operations
     traces:
-      - prd001-tool-system-components-interfaces AC1
+      - srd001-tool-system-components-interfaces AC1
 test_suite: test-rel01.0

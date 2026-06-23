@@ -88,8 +88,8 @@ acceptance_checks:
 
 traceability:
   requirements:
-    - prd006-stitch-essential-toolset:R1.2
-    - prd006-stitch-essential-toolset:R1.3
-    - prd007-file-read-search-and-mutation-safety:R1.1
-    - prd007-file-read-search-and-mutation-safety:R1.2
-    - prd007-file-read-search-and-mutation-safety:R1.3
+    - srd006-stitch-essential-toolset:R1.2
+    - srd006-stitch-essential-toolset:R1.3
+    - srd007-file-read-search-and-mutation-safety:R1.1
+    - srd007-file-read-search-and-mutation-safety:R1.2
+    - srd007-file-read-search-and-mutation-safety:R1.3

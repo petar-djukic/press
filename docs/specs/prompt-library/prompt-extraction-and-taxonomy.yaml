@@ -324,8 +324,8 @@ maintenance:
     prompt_library_version: v1
     update_policy: |
       Any prompt template change requires version bump and trace update to affected
-      interfaces/use-cases/PRDs.
+      interfaces/use-cases/SRDs.
   traceability_links:
-    - docs/specs/product-requirements/prd010-prompt-library-and-composition.yaml
+    - docs/specs/software-requirements/srd010-prompt-library-and-composition.yaml
     - docs/interfaces/if001-llm-tool-adapter.yaml
     - docs/specs/use-cases/uc001-agentic-loop-core.yaml

@@ -54,7 +54,7 @@ Press is in specification phase. No application code has been generated yet.
 
 ## Methodology
 
-Specification-driven development. The chain runs VISION → ARCHITECTURE → PRDs
+Specification-driven development. The chain runs VISION → ARCHITECTURE → SRDs
 → use cases → test suites → code. All specifications are YAML. Cobbler's
 measure phase reads the specs and proposes tasks. Stitch executes them.
 
@@ -68,7 +68,7 @@ press/
 │   ├── SPECIFICATIONS.yaml    Cross-reference index
 │   ├── road-map.yaml          Release schedule
 │   ├── specs/
-│   │   ├── product-requirements/   24 PRDs
+│   │   ├── product-requirements/   24 SRDs
 │   │   ├── use-cases/              4 use cases (spec complete)
 │   │   ├── test-suites/            2 test suites (pending)
 │   │   ├── interfaces/             10 interface contracts

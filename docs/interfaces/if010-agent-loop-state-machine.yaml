@@ -21,7 +21,7 @@ dependencies:
   - WorkspaceMutationPort
   - MessageHistory (if007)
   - CrumbLedger (if006)
-  - TracePort (prd027)
+  - TracePort (srd027)
 
 types:
   LoopConfig:
@@ -608,9 +608,9 @@ convergence_detection: |
   each other. No existing coding agent (as of 2026-04) detects these — they
   rely entirely on hard limits (max_turns, token budgets).
 
-  Metrics are always collected (prd024 R1). Statistics are always reported
-  in LoopResult (prd024 R2). Degradation signals only trigger early
-  termination when convergence_config.enabled=true (prd024 R4).
+  Metrics are always collected (srd024 R1). Statistics are always reported
+  in LoopResult (srd024 R2). Degradation signals only trigger early
+  termination when convergence_config.enabled=true (srd024 R4).
 
   Five degradation signals:
 
@@ -699,14 +699,14 @@ acceptance_checks:
 
 traceability:
   requirements:
-    - prd001-tool-system-components-interfaces:R4.1
-    - prd002-trail-lifecycle-state-machine:R1.1
-    - prd002-trail-lifecycle-state-machine:R2.1
-    - prd004-tool-invocation-validation:R1.1
-    - prd024-llm-degradation-detection:R1.1
-    - prd024-llm-degradation-detection:R2.1
-    - prd024-llm-degradation-detection:R3.1
-    - prd024-llm-degradation-detection:R4.2
-    - prd024-llm-degradation-detection:R5.1
+    - srd001-tool-system-components-interfaces:R4.1
+    - srd002-trail-lifecycle-state-machine:R1.1
+    - srd002-trail-lifecycle-state-machine:R2.1
+    - srd004-tool-invocation-validation:R1.1
+    - srd024-llm-degradation-detection:R1.1
+    - srd024-llm-degradation-detection:R2.1
+    - srd024-llm-degradation-detection:R3.1
+    - srd024-llm-degradation-detection:R4.2
+    - srd024-llm-degradation-detection:R5.1
   use_cases:
     - rel01.0-uc001-agentic-loop-core

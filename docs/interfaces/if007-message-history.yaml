@@ -287,8 +287,8 @@ acceptance_checks:
 
 traceability:
   requirements:
-    - prd002-trail-lifecycle-state-machine:R1.1
-    - prd002-trail-lifecycle-state-machine:R2.1
-    - prd019-memory-summary-prompt-family:R1.1
+    - srd002-trail-lifecycle-state-machine:R1.1
+    - srd002-trail-lifecycle-state-machine:R2.1
+    - srd019-memory-summary-prompt-family:R1.1
   use_cases:
     - rel01.0-uc001-agentic-loop-core

@@ -1,4 +1,4 @@
-id: prd019-memory-summary-prompt-family
+id: srd019-memory-summary-prompt-family
 title: Memory and Summary Prompt Family
 problem: |
   Long-running trails exceed context windows and lose continuity without

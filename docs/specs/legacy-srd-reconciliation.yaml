@@ -1,17 +1,17 @@
-id: legacy-prd-reconciliation
-title: Legacy PRD Reconciliation and Cleanup Decisions
+id: legacy-srd-reconciliation
+title: Legacy SRD Reconciliation and Cleanup Decisions
 status: applied
 updated: 2026-03-31
 
 intent: |
-  Remove duplicate normative content from legacy markdown PRDs under prds/
+  Remove duplicate normative content from legacy markdown SRDs under prds/
   and keep docs/specs as the single canonical specification source.
 
 decisions:
   - legacy_file: prds/tool-system-components-interfaces.md
     status: superseded
     canonical_docs:
-      - docs/specs/product-requirements/prd001-tool-system-components-interfaces.yaml
+      - docs/specs/software-requirements/srd001-tool-system-components-interfaces.yaml
       - docs/interfaces/if001-llm-tool-adapter.yaml
       - docs/interfaces/if003-workspace-discovery-read-port.yaml
       - docs/interfaces/if004-workspace-mutation-port.yaml
@@ -22,35 +22,35 @@ decisions:
   - legacy_file: prds/trail-lifecycle-state-machine.md
     status: superseded
     canonical_docs:
-      - docs/specs/product-requirements/prd002-trail-lifecycle-state-machine.yaml
+      - docs/specs/software-requirements/srd002-trail-lifecycle-state-machine.yaml
       - docs/specs/use-cases/uc001-agentic-loop-core.yaml
     action: removed_after_migration
 
   - legacy_file: prds/tool-stash-availability.md
     status: superseded
     canonical_docs:
-      - docs/specs/product-requirements/prd003-tool-stash-availability.yaml
+      - docs/specs/software-requirements/srd003-tool-stash-availability.yaml
       - docs/interfaces/if006-state-and-audit-ports.yaml
     action: removed_after_migration
 
   - legacy_file: prds/tool-invocation-validation.md
     status: superseded
     canonical_docs:
-      - docs/specs/product-requirements/prd004-tool-invocation-validation.yaml
+      - docs/specs/software-requirements/srd004-tool-invocation-validation.yaml
       - docs/specs/use-cases/uc001-agentic-loop-core.yaml
     action: removed_after_migration
 
   - legacy_file: prds/undo-and-compensation.md
     status: superseded
     canonical_docs:
-      - docs/specs/product-requirements/prd005-undo-and-compensation.yaml
+      - docs/specs/software-requirements/srd005-undo-and-compensation.yaml
     action: removed_after_migration
 
   - legacy_file: prds/agent-loop-tool-invocation.md
     status: partially_migrated
     canonical_docs:
-      - docs/specs/product-requirements/prd004-tool-invocation-validation.yaml
-      - docs/specs/product-requirements/prd006-stitch-essential-toolset.yaml
+      - docs/specs/software-requirements/srd004-tool-invocation-validation.yaml
+      - docs/specs/software-requirements/srd006-stitch-essential-toolset.yaml
       - docs/specs/use-cases/uc001-agentic-loop-core.yaml
     unique_residue:
       - response_type_taxonomy_detail
@@ -73,8 +73,8 @@ decisions:
   - legacy_file: prds/glob-tool.md
     status: partially_migrated
     canonical_docs:
-      - docs/specs/product-requirements/prd006-stitch-essential-toolset.yaml
-      - docs/specs/product-requirements/prd007-file-read-search-and-mutation-safety.yaml
+      - docs/specs/software-requirements/srd006-stitch-essential-toolset.yaml
+      - docs/specs/software-requirements/srd007-file-read-search-and-mutation-safety.yaml
       - docs/interfaces/if003-workspace-discovery-read-port.yaml
     unique_residue:
       - backend_adapter_examples_for_rg
@@ -85,8 +85,8 @@ decisions:
     status: reclassified
     canonical_docs:
       - docs/specs/prompt-library/prompt-extraction-and-taxonomy.yaml
-      - docs/specs/product-requirements/prd010-prompt-library-and-composition.yaml
-      - docs/specs/product-requirements/prd021-comparative-agent-conformance-baseline.yaml
+      - docs/specs/software-requirements/srd010-prompt-library-and-composition.yaml
+      - docs/specs/software-requirements/srd021-comparative-agent-conformance-baseline.yaml
       - docs/specs/use-cases/uc004-comparative-conformance-evaluation.yaml
       - docs/specs/test-suites/ts002-comparative-conformance-baseline.yaml
     decision: retain_research_and_extract_normative_baseline

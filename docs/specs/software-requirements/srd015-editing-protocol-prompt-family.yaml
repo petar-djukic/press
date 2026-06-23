@@ -1,4 +1,4 @@
-id: prd015-editing-protocol-prompt-family
+id: srd015-editing-protocol-prompt-family
 title: Editing Protocol Prompt Family
 problem: |
   Stitch must apply code changes deterministically. Editing protocol prompts

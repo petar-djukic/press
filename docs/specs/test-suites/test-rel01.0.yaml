@@ -10,7 +10,7 @@ test_cases:
   - use_case: rel01.0-uc001-agentic-loop-core
     name: Agentic loop produces one llm.generate crumb per turn
     traces:
-      - prd001-tool-system-components-interfaces AC5
+      - srd001-tool-system-components-interfaces AC5
     inputs:
       - "Assignment envelope with prompt and trail reference"
     expected:
@@ -18,7 +18,7 @@ test_cases:
   - use_case: rel01.0-uc002-orchestrator-stitch-boundary
     name: Stitch boundary returns result without git operations
     traces:
-      - prd001-tool-system-components-interfaces AC4
+      - srd001-tool-system-components-interfaces AC4
     inputs:
       - "Orchestrator assignment envelope"
     expected:

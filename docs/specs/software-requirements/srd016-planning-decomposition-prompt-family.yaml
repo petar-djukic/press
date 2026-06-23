@@ -1,4 +1,4 @@
-id: prd016-planning-decomposition-prompt-family
+id: srd016-planning-decomposition-prompt-family
 title: Planning and Decomposition Prompt Family
 problem: |
   Complex tasks require explicit decomposition and branching logic. Without a

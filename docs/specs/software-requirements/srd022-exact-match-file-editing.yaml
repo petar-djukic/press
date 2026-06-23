@@ -1,10 +1,10 @@
-id: prd022-exact-match-file-editing
+id: srd022-exact-match-file-editing
 title: Exact-Match File Editing
 
 problem: |
   The agent must edit source files by replacing specific text spans. A naive
   implementation risks partial writes, ambiguous matches, or corrupted files.
-  This PRD defines the exact-match editing tier: the primary mechanism where
+  This SRD defines the exact-match editing tier: the primary mechanism where
   old_string must match exactly one location in the file. This tier uses only
   Go standard library (strings.Count, strings.Replace) and has no external
   dependencies. It handles the vast majority of LLM-driven edits where the
@@ -44,7 +44,7 @@ requirements:
     - R4.3: Every edit_file invocation must emit a crumb record with assignment id, trail id, and call id.
 
 non_goals:
-  - Fuzzy or approximate matching (see prd023).
+  - Fuzzy or approximate matching (see srd023).
   - AST-aware or language-specific transformations.
   - Multi-file batch replacement in a single invocation.
   - Regex or glob pattern matching in old_string.

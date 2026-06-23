@@ -285,8 +285,8 @@ acceptance_checks:
 
   traceability:
   requirements:
-    - prd006-stitch-essential-toolset:R2.1
-    - prd006-stitch-essential-toolset:R2.4
-    - prd004-tool-invocation-validation:R4.4
+    - srd006-stitch-essential-toolset:R2.1
+    - srd006-stitch-essential-toolset:R2.4
+    - srd004-tool-invocation-validation:R4.4
   use_cases:
     - rel01.0-uc001-agentic-loop-core

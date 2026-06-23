@@ -4,7 +4,7 @@ go 1.26.4
 
 require (
 	github.com/magefile/mage v1.17.2
-	github.com/mesh-intelligence/cobbler-scaffold v0.20260308.5
+	github.com/mesh-intelligence/cobbler-scaffold v0.20260612.1
 )
 
 require (

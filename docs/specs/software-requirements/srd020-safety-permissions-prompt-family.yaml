@@ -1,4 +1,4 @@
-id: prd020-safety-permissions-prompt-family
+id: srd020-safety-permissions-prompt-family
 title: Safety and Permissions Prompt Family
 problem: |
   Stitch executes tools with real workspace effects. Safety and permissions
