@@ -46,6 +46,16 @@ releases:
       - id: rel01.1-uc004-prompt-library-baseline
         summary: Prompt family inventory composition and provenance contract
         status: pending
+  - version: "01.3"
+    name: Comparative Conformance Evaluation
+    status: not_started
+    depends_on: ["01.0"]
+    description: |
+      Evaluate the agent runtime against open-source conformance baselines.
+    use_cases:
+      - id: rel01.3-uc004-comparative-conformance-evaluation
+        summary: Evaluate runtime against conformance baselines
+        status: pending
   - version: "02.0"
     name: Undo and Compensation Delivery
     status: not_started

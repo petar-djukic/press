@@ -134,19 +134,6 @@ document_types:
       requirement_groups: "R1, R2, R3, ..."
       requirement_items: "R1.1, R1.2, R2.1, ..."
       requirement_id_format: "R{group}.{item} — numeric dotted only (e.g., R1.1, R2.3). Letter suffixes (R2a) are not valid and are flagged by mage analyze."
-      requirement_weight: |
-        Each R-item may optionally specify a weight indicating implementation
-        complexity. Weight is a positive integer with no upper bound, default 1.
-        The measure agent uses weights to batch requirements into tasks that fit
-        within the max_weight_per_task budget. Two YAML formats are supported:
-
-        Simple (weight defaults to 1):
-          - R1.1: Must accept -f flag
-
-        Weighted:
-          - R6.1:
-              text: Must scan each input line for known timestamp patterns
-              weight: 3
       acceptance_criteria_ids: "AC1, AC2, AC3, ... (sequential within each PRD)"
     acceptance_criteria_schema:
       description: |
@@ -352,14 +339,12 @@ completeness_checklists:
     - non_goals define what is out of scope
     - acceptance_criteria are structured objects with id, criterion, and traces
     - Every R-item appears in at least one AC's traces list
-    - Interactive requirements (prompting, confirmation) specify exact prompt text, accepted input values, case sensitivity, retry behavior on invalid input, and default behavior when stdin is not a terminal
     - File saved as prd[NNN]-[feature-name].yaml
 
   use_case:
     - id matches filename without extension
     - flow steps are numbered (F1, F2, ...), end-to-end, map to real components
     - touchpoints are numbered (T1, T2, ...) and list interfaces, components, protocols
-    - touchpoints that cite PRDs must include R-group references (e.g., "prd030-md5sum R1, R2, R3"); bare PRD citations without R-groups break codereadiness computation
     - success_criteria are structured objects with id, criterion, and traces to PRD AC IDs
     - test_suite references a corresponding test suite ID
     - Test suite YAML exists and traces back to this use case

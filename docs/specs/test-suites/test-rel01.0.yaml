@@ -1,0 +1,25 @@
+id: test-rel01.0
+title: Release 01.0 Test Suite
+
+release: "01.0"
+traces:
+  - rel01.0-uc001-agentic-loop-core
+  - rel01.0-uc002-orchestrator-stitch-boundary
+
+test_cases:
+  - use_case: rel01.0-uc001-agentic-loop-core
+    name: Agentic loop produces one llm.generate crumb per turn
+    traces:
+      - prd001-tool-system-components-interfaces AC5
+    inputs:
+      - "Assignment envelope with prompt and trail reference"
+    expected:
+      - "One primary llm.generate invocation crumb per loop turn"
+  - use_case: rel01.0-uc002-orchestrator-stitch-boundary
+    name: Stitch boundary returns result without git operations
+    traces:
+      - prd001-tool-system-components-interfaces AC4
+    inputs:
+      - "Orchestrator assignment envelope"
+    expected:
+      - "Stitch execution result returned without git operations in runtime"

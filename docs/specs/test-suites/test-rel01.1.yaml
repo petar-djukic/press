@@ -1,0 +1,16 @@
+id: test-rel01.1
+title: Release 01.1 Test Suite
+
+release: "01.1"
+traces:
+  - rel01.1-uc003-hexagonal-runtime-wiring
+
+test_cases:
+  - use_case: rel01.1-uc003-hexagonal-runtime-wiring
+    name: Hexagonal ports and adapters conform to dependency inversion
+    traces:
+      - prd009-hexagonal-ports-and-wiring AC1
+    inputs:
+      - "Runtime component configuration with port and adapter bindings"
+    expected:
+      - "Core components depend on port interfaces only"
