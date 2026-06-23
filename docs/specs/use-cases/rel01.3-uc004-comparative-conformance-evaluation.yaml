@@ -8,14 +8,14 @@ actor: Developer or evaluator running conformance checks
 trigger: Runtime reaches sufficient maturity for baseline comparison
 flow:
   - F1: "Load conformance baseline requirements from srd021"
-  - F2: "Configure test harness with runtime instance and baseline checklist"
-  - F3: "Execute prompt transparency checks: verify prompt assembly is inspectable and reproducible"
-  - F4: "Execute parser robustness checks: verify tool call normalization handles malformed inputs"
-  - F5: "Execute workflow control checks: verify agent runtime vs LLM decision boundaries"
-  - F6: "Execute tool architecture checks: verify dynamic tool subset computation per request"
-  - F7: "Execute Go creation readiness checks: verify Go-specific diagnostics and LSP integration"
-  - F8: "Aggregate results and produce conformance report"
-  - F9: "Identify gaps and map to SRD requirements for future work"
+  - F2: "Configure test harness with runtime instance and baseline checklist (requires baselines from F1)"
+  - F3: "Execute prompt transparency checks: verify prompt assembly is inspectable and reproducible (requires configured harness from F2)"
+  - F4: "Execute parser robustness checks: verify tool call normalization handles malformed inputs (requires harness from F2)"
+  - F5: "Execute workflow control checks: verify agent runtime vs LLM decision boundaries (requires harness from F2)"
+  - F6: "Execute tool architecture checks: verify dynamic tool subset computation per request (requires harness from F2)"
+  - F7: "Execute Go creation readiness checks: verify Go-specific diagnostics and LSP integration (requires harness from F2)"
+  - F8: "Aggregate results and produce conformance report (requires all check results from F3-F7)"
+  - F9: "Identify gaps and map to SRD requirements for future work (requires aggregated report from F8)"
 touchpoints:
   - T1: "StitchBoundaryAdapter — entry interface conformance (srd021-comparative-agent-conformance-baseline R1)"
   - T2: "Engine — workflow control conformance (srd021-comparative-agent-conformance-baseline R2)"
@@ -26,11 +26,11 @@ touchpoints:
   - T7: "CrumbLedger — audit quality conformance (srd021-comparative-agent-conformance-baseline R7)"
 success_criteria:
   - id: S1
-    criterion: Conformance report covers all baseline dimensions with pass/fail/partial results
+    criterion: Conformance report covers all baseline dimensions with pass/fail/partial results, integrating checks across entry interface, workflow control, parser robustness, and audit quality
     traces:
       - srd021-comparative-agent-conformance-baseline AC1
   - id: S2
-    criterion: Identified gaps are mapped to specific SRD R-items for follow-up
+    criterion: Identified gaps are mapped to specific SRD R-items for follow-up, connecting conformance evaluation results to the specification graph
     traces:
       - srd021-comparative-agent-conformance-baseline AC2
 test_suite: test-rel01.3

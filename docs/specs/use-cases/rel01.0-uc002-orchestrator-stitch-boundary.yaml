@@ -8,13 +8,13 @@ actor: External orchestrator (cobbler-scaffold)
 trigger: Orchestrator picks a ready task and creates an assignment envelope for Engine execution
 flow:
   - F1: "Orchestrator prepares assignment envelope with trail_id, specification references, workspace path, and execution budget"
-  - F2: "Orchestrator sends AgentInvokeRequest with prompt and assignment metadata to StitchBoundaryAdapter"
-  - F3: "StitchBoundaryAdapter validates assignment envelope and loads Machine and tool declarations"
-  - F4: "StitchBoundaryAdapter validates Machine against tool signal sets at load time"
-  - F5: "StitchBoundaryAdapter starts Engine dispatch loop (see uc001) until terminal state"
-  - F6: "Engine classifies outcome (Clean, Recovery, Stuck, Divergent) on terminal state"
-  - F7: "StitchBoundaryAdapter packages execution summary with outcome classification into AgentInvokeResponse"
-  - F8: "StitchBoundaryAdapter returns result envelope to orchestrator"
+  - F2: "Orchestrator sends AgentInvokeRequest with prompt and assignment metadata to StitchBoundaryAdapter (requires envelope from F1)"
+  - F3: "StitchBoundaryAdapter validates assignment envelope and loads Machine and tool declarations (requires request from F2)"
+  - F4: "StitchBoundaryAdapter validates Machine against tool signal sets at load time (requires loaded declarations from F3)"
+  - F5: "StitchBoundaryAdapter starts Engine dispatch loop until terminal state (requires validated Machine from F4)"
+  - F6: "Engine classifies outcome on terminal state (requires dispatch loop completion from F5)"
+  - F7: "StitchBoundaryAdapter packages execution summary with outcome classification into AgentInvokeResponse (requires outcome from F6)"
+  - F8: "StitchBoundaryAdapter returns result envelope to orchestrator (requires packaged response from F7)"
   - F9: "Error — invalid assignment envelope: reject with structured error before Engine starts"
   - F10: "Error — Machine validation fails: reject with structured error before any tool executes"
 touchpoints:
@@ -23,15 +23,11 @@ touchpoints:
   - T3: "CrumbLedger — execution summary and outcome classification extraction (srd001-tool-system-components-interfaces R5)"
 success_criteria:
   - id: S1
-    criterion: A valid assignment envelope produces a structured AgentInvokeResponse with outcome classification and execution summary
+    criterion: A valid assignment envelope produces a structured AgentInvokeResponse with outcome classification and execution summary, while an invalid envelope or invalid Machine is rejected before the Engine dispatch loop starts
     traces:
       - srd001-tool-system-components-interfaces AC1
   - id: S2
-    criterion: An invalid assignment envelope or invalid Machine is rejected before the Engine dispatch loop starts
-    traces:
-      - srd001-tool-system-components-interfaces AC1
-  - id: S3
-    criterion: The runtime performs no git operations; branch management belongs to the orchestrator
+    criterion: The runtime performs no git operations across the full boundary lifecycle; branch management belongs to the orchestrator
     traces:
       - srd001-tool-system-components-interfaces AC1
 test_suite: test-rel01.0

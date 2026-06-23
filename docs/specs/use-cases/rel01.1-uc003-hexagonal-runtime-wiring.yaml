@@ -7,10 +7,10 @@ actor: Developer configuring runtime adapters
 trigger: Runtime initialization with port and adapter bindings
 flow:
   - F1: "Configure inbound port binding: StitchBoundaryAdapter implements AgentInvokePort"
-  - F2: "Configure outbound port bindings: LLMToolAdapter, WorkspaceDiscoveryAdapter, WorkspaceMutationAdapter, ValidationAdapter, StateAuditAdapter implement their respective ports"
-  - F3: "Initialize runtime with port bindings; core services receive port references only"
-  - F4: "Execute a dispatch cycle through the wired ports to validate end-to-end data flow"
-  - F5: "Replace one adapter with a test double and verify Engine behavior is unchanged"
+  - F2: "Configure outbound port bindings: LLMToolAdapter, WorkspaceDiscoveryAdapter, WorkspaceMutationAdapter, ValidationAdapter, StateAuditAdapter, TraceAdapter implement their respective ports (requires inbound binding from F1)"
+  - F3: "Initialize runtime with port bindings; core services receive port references only (requires all port bindings from F2)"
+  - F4: "Execute a dispatch cycle through the wired ports to validate end-to-end data flow (requires initialized runtime from F3)"
+  - F5: "Replace one adapter with a test double and verify Engine behavior is unchanged (requires baseline data flow from F4)"
 touchpoints:
   - T1: "Engine — depends on ports only (srd009-hexagonal-ports-and-wiring R1, R2)"
   - T2: "Port interfaces — LLMInvocationPort, WorkspaceDiscoveryReadPort, WorkspaceMutationPort, ValidationPort, StateAuditPorts, TracePort (srd009-hexagonal-ports-and-wiring R3)"
@@ -20,7 +20,7 @@ success_criteria:
     traces:
       - srd009-hexagonal-ports-and-wiring AC1
   - id: S2
-    criterion: Replacing an adapter with a test double does not require core code changes
+    criterion: Replacing an adapter with a test double does not require core code changes, validating dependency inversion across the full port-adapter boundary
     traces:
       - srd009-hexagonal-ports-and-wiring AC2
 test_suite: test-rel01.1
